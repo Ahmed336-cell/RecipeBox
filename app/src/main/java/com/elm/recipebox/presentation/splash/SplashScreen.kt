@@ -9,16 +9,30 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.elm.recipebox.R
 
 @Composable
-fun SplashScreen(){
+fun SplashScreen(
+    onSplashFinished: () -> Unit = {},
+    viewModel: SplashViewModel = viewModel ()
+
+){
+    val isFinished = viewModel.isSplashFinished.collectAsState()
+    LaunchedEffect(isFinished.value) {
+        if (isFinished.value) {
+            onSplashFinished()
+        }
+    }
 
         Column (
             modifier = Modifier
