@@ -1,4 +1,7 @@
 package com.elm.recipebox.presentation.collection
 
-class CollectionScreen {
+import androidx.compose.runtime.Composable
+
+@Composable
+fun CollectionScreen (){
 }

@@ -11,11 +11,16 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.elm.recipebox.presentation.navigation.CustomBottomBar
+import com.elm.recipebox.presentation.navigation.NavGraph
+import com.elm.recipebox.presentation.navigation.Screen
 import com.elm.recipebox.presentation.onboarding.OnboardingScreen
 import com.elm.recipebox.presentation.splash.SplashScreen
 import com.elm.recipebox.ui.theme.RecipeBoxTheme
@@ -25,43 +30,22 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            RecipeBoxTheme {
-                Surface(color = MaterialTheme.colorScheme.background) {
-                    val navController = rememberNavController()
-                    NavHost(
-                        navController = navController,
-                        startDestination = "splash"
-                    ) {
-                        composable("splash") {
-                            SplashScreen(
-                                onSplashFinished = {
-                                    navController.navigate("onboarding") {
-                                        popUpTo("splash") { inclusive = true }
-                                    }
-                                }
-                            )
-                        }
+            val navController = rememberNavController()
+            val navBackStackEntry by navController.currentBackStackEntryAsState()
+            val currentRoute = navBackStackEntry?.destination?.route
 
-
-                        composable("onboarding") {
-                            OnboardingScreen(
-                                onFinish = {
-//                                    navController.navigate("home") {
-//                                        popUpTo("onboarding") { inclusive = true }
-//                                    }
-                                }
-                            )
-                        }
-
-//                        composable("home") {
-//                            SplashScreen()
-//                        }
+            Scaffold(
+                bottomBar = {
+                    if (currentRoute != Screen.Splash.route && currentRoute != Screen.Onboarding.route) {
+                        CustomBottomBar(navController)
                     }
                 }
-                }
+            ) { innerPadding ->
+                NavGraph(
+                    navController = navController,
+                    startDestination = Screen.Splash.route
+                )
             }
         }
     }
-
-
-
+}

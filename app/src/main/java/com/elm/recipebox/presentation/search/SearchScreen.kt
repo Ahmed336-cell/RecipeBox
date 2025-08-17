@@ -1,4 +1,7 @@
 package com.elm.recipebox.presentation.search
 
-class SearchScreen {
+import androidx.compose.runtime.Composable
+
+@Composable
+fun SearchScreen() {
 }

@@ -1,4 +1,7 @@
 package com.elm.recipebox.presentation.recipe.add
 
-class AddRecipeScreen {
+import androidx.compose.runtime.Composable
+
+@Composable
+fun AddRecipeScreen() {
 }
