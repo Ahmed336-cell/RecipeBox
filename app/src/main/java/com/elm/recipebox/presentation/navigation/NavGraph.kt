@@ -33,7 +33,7 @@ import com.elm.recipebox.presentation.collection.CollectionScreen
 import com.elm.recipebox.presentation.home.HomeScreen
 import com.elm.recipebox.presentation.onboarding.OnboardingScreen
 import com.elm.recipebox.presentation.profile.ProfileScreen
-import com.elm.recipebox.presentation.recipe.add.AddRecipeScreen
+import com.elm.recipebox.presentation.recipe.add.AddNewRecipeStepper
 import com.elm.recipebox.presentation.search.SearchScreen
 import com.elm.recipebox.presentation.splash.SplashScreen
 
@@ -60,7 +60,7 @@ fun NavGraph(navController: NavHostController, startDestination: String) {
         }
         composable(Screen.Home.route) { HomeScreen() }
         composable(Screen.Search.route) { SearchScreen() }
-        composable(Screen.Add.route) { AddRecipeScreen() }
+        composable(Screen.Add.route) { AddNewRecipeStepper() }
         composable(Screen.Save.route) { CollectionScreen() }
         composable(Screen.Profile.route) { ProfileScreen() }
     }

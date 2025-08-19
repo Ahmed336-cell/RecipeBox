@@ -115,7 +115,7 @@ fun SearchBar(onFilterClick: () -> Unit){
                     Icon(
                         modifier = Modifier.size(30.dp),
                         painter = painterResource(R.drawable.search),
-                        contentDescription = "Email Icon"
+                        contentDescription = "Search Icon"
                     )
                 },
                 value = "",
