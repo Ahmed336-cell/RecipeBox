@@ -7,18 +7,27 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.collectAsState
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -34,21 +43,98 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
-import com.google.accompanist.flowlayout.FlowRow
-import com.google.accompanist.flowlayout.MainAxisAlignment
+
+// Reusable composable functions
+@Composable
+fun OrangeLabel(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.titleLarge,
+        color = Color.White,
+        modifier = Modifier
+            .background(Color(0xFFFF6339), shape = RoundedCornerShape(8.dp))
+            .padding(4.dp)
+    )
+}
+
+@Composable
+fun BlueContainer(
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit
+) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(bottom = 16.dp)
+            .background(
+                Color(0xFF4058A0), 
+                shape = RoundedCornerShape(
+                    topStart = 12.dp, 
+                    bottomStart = 12.dp, 
+                    topEnd = 12.dp, 
+                    bottomEnd = 12.dp
+                )
+            )
+            .padding(16.dp)
+    ) {
+        content()
+    }
+}
+
+@Composable
+fun BlueContainerWithTopRadius(
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit
+) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(bottom = 16.dp)
+            .background(
+                Color(0xFF4058A0),
+                shape = RoundedCornerShape(
+                    topStart = 40.dp, 
+                    bottomStart = 12.dp,
+                    topEnd = 12.dp, 
+                    bottomEnd = 12.dp
+                )
+            )
+            .padding(16.dp)
+    ) {
+        content()
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddNewRecipeStepper() {
-    var currentStep by remember { mutableStateOf(0) }
-    var ingredients by remember { mutableStateOf(listOf("")) }
-    var steps by remember { mutableStateOf(listOf("")) }
-    var recipeTitle by remember { mutableStateOf("") }
-    var recipeDesc by remember { mutableStateOf("") }
-    var hashtage by remember { mutableStateOf("") }
+fun AddNewRecipeStepper(
+    viewModel: AddRecipeViewModel = hiltViewModel(),
+    onRecipeCreated: (Long) -> Unit = {}
+) {
+    val recipeData by viewModel.recipeData.collectAsState()
+    val currentStep by viewModel.currentStep.collectAsState()
+    val uiState by viewModel.uiState.collectAsState()
+    
+    // Handle UI state changes
+    LaunchedEffect(uiState.isSuccess) {
+        if (uiState.isSuccess) {
+            uiState.createdRecipeId?.let { recipeId ->
+                onRecipeCreated(recipeId)
+            }
+        }
+    }
+    
+    // Show error if any
+    uiState.error?.let { error ->
+        LaunchedEffect(error) {
+            // Show error snackbar or dialog
+            viewModel.clearError()
+        }
+    }
 
     Column(
         modifier = Modifier
+            .fillMaxSize()
             .padding(16.dp)
             .systemBarsPadding()
     ) {
@@ -58,59 +144,54 @@ fun AddNewRecipeStepper() {
         )
 
         Spacer(modifier = Modifier.height(24.dp))
+        
         Box(
             modifier = Modifier
-                .fillMaxSize()
+                .fillMaxWidth()
+                .weight(1f)
                 .padding(bottom = 80.dp)
-                .verticalScroll(rememberScrollState())
-        ){
-
-
-
-        when (currentStep) {
-            0 -> DetailsSection(title = recipeTitle , desc = recipeDesc ,hashtage)
-            {newTitle , hastag->
-
-                hashtage=hastag
-                recipeTitle=newTitle
-
+        ) {
+                        when (currentStep) {
+                0 -> DetailsSection(
+                    recipeData = recipeData,
+                    viewModel = viewModel,
+                    onImageUriChange = { uri -> viewModel.updateImageUri(uri) }
+                )
+                1 -> IngredientsSection(recipeData.ingredients) { newIngredients ->
+                    viewModel.updateIngredients(newIngredients)
+                }
+                2 -> StepsSection(recipeData.steps) { newSteps ->
+                    viewModel.updateSteps(newSteps)
+                }
+                3 -> ConfirmScreen(recipeData)
             }
-            1 -> IngredientsSection(ingredients) {
-                ingredients = it
-            }
-            2 -> StepsSection (steps){
-                steps=it
-            }
-            3 -> ConfirmScreen(recipeTitle,recipeDesc,ingredients,steps)
-        }
+            
             Row(
-
                 horizontalArrangement = Arrangement.SpaceBetween,
-                modifier = Modifier.fillMaxWidth()
-                    .align (Alignment.BottomCenter)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.BottomCenter)
                     .padding(top = 30.dp)
             ) {
                 if (currentStep > 0) {
-                    Button(onClick = { currentStep-- }) {
+                    Button(onClick = { viewModel.previousStep() }) {
                         Text("Back")
                     }
                 }
                 if (currentStep < 3) {
-                    Button(onClick = { currentStep++ }) {
+                    Button(onClick = { viewModel.nextStep() }) {
                         Text("Next")
                     }
                 } else {
-                    Button(onClick = { /* Submit */ }) {
+                    Button(onClick = { viewModel.saveRecipe() }) {
                         Text("Finish")
                     }
                 }
             }
-
-}
-
+        }
     }
-
 }
+
 @Composable
 fun Stepper(totalSteps: Int, currentStep: Int) {
     val steps = listOf("Recipe Details", "Ingredients", "Steps", "Confirm")
@@ -143,7 +224,7 @@ fun Stepper(totalSteps: Int, currentStep: Int) {
                 }
 
                 if (i < totalSteps - 1) {
-                    Divider(
+                    HorizontalDivider(
                         color = if (i < currentStep) MaterialTheme.colorScheme.primary else Color.Gray,
                         thickness = 2.dp,
                         modifier = Modifier
@@ -157,147 +238,228 @@ fun Stepper(totalSteps: Int, currentStep: Int) {
 }
 
 @Composable
-fun DetailsSection(title: String, desc: String , hashtage: String,     onValueChange: (String, String) -> Unit
-){
-
-    var imageUri by remember { mutableStateOf<Uri?>(null) }
-
+fun DetailsSection(
+    recipeData: RecipeFormData,
+    viewModel: AddRecipeViewModel,
+    onImageUriChange: (Uri?) -> Unit
+) {
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
-    ) { uri: Uri? -> imageUri = uri }
-    Column ( modifier = Modifier
-
+    ) { uri: Uri? -> onImageUriChange(uri) }
+    
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState())
     ) {
-
-        Box(
+        // Image Section
+        Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(200.dp)
-                .background(Color.LightGray, RoundedCornerShape(12.dp)),
-            contentAlignment = Alignment.Center
+                .height(200.dp),
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = Color(0xFFF5F5F5)
+            )
         ) {
-            if (imageUri != null) {
-                Image(
-                    painter = rememberAsyncImagePainter(
-                        ImageRequest.Builder(LocalContext.current)
-                            .data(imageUri)
-                            .build()
-                    ),
-                    contentDescription = "Recipe Image",
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
-            } else {
-                Text("No Image Selected")
-            }
-            Button(
-                onClick = { galleryLauncher.launch("image/*") },
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(8.dp)
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
             ) {
-                Text("Pick Image")
+                if (recipeData.imageUri != null) {
+                    Image(
+                        painter = rememberAsyncImagePainter(
+                            ImageRequest.Builder(LocalContext.current)
+                                .data(recipeData.imageUri)
+                                .build()
+                        ),
+                        contentDescription = "Recipe Image",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Image(
+                            painter = painterResource(R.drawable.dish1),
+                            contentDescription = "Placeholder",
+                            modifier = Modifier.size(80.dp),
+                            alpha = 0.3f
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            "No Image Selected",
+                            color = Color.Gray,
+                            fontSize = 14.sp
+                        )
+                    }
+                }
+                
+                // Floating action button for image selection
+                FloatingActionButton(
+                    onClick = { galleryLauncher.launch("image/*") },
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(16.dp)
+                        .size(48.dp),
+                    containerColor = Color(0xFFFF6339),
+                    contentColor = Color.White
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.add),
+                        contentDescription = "Add Image",
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
             }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        CustomTextFeild(
+        // Recipe Name
+        CustomTextField(
             label = "Recipe Name",
             labelOrange = "Name",
-            recipeDesc = title,
-           onValueChange = { onValueChange( it,hashtage ) }
+            value = recipeData.title,
+            onValueChange = viewModel::updateTitle
         )
-        Spacer(modifier = Modifier.height(4.dp))
-        CustomIncremental(labelOrange = "Number")
-        Spacer(modifier = Modifier.height(4.dp))
-        customCookTime(labelOrange = "Cook Time")
-        Spacer(modifier = Modifier.height(4.dp))
-        diffcuiltyCard()
-        Spacer(modifier = Modifier.height(4.dp))
-        DishTypeCard()
-        Spacer(modifier = Modifier.height(4.dp))
-        SuggestedDietCard()
-        Spacer(modifier = Modifier.height(4.dp))
-        CustomTextFeildHashtags("#eat#food" , "HashTags" ,hashtage,
-            onValueChange = { onValueChange(title, it ) }
-
+        
+        Spacer(modifier = Modifier.height(8.dp))
+        
+        // Recipe Description
+        CustomTextField(
+            label = "Recipe Description",
+            labelOrange = "Description",
+            value = recipeData.description,
+            onValueChange = viewModel::updateDescription
+        )
+        
+        Spacer(modifier = Modifier.height(8.dp))
+        
+        // Servings
+        ServingsSection(
+            labelOrange = "Number",
+            servings = recipeData.servings,
+            onServingsChange = viewModel::updateServings
+        )
+        
+        Spacer(modifier = Modifier.height(8.dp))
+        
+        // Cook Time
+        CookTimeSection(
+            labelOrange = "Cook Time",
+            hours = recipeData.cookTimeHours,
+            minutes = recipeData.cookTimeMinutes,
+            onTimeChange = { hours, minutes -> viewModel.updateCookTime(hours, minutes) }
+        )
+        
+        Spacer(modifier = Modifier.height(8.dp))
+        
+        // Difficulty
+        DifficultyCard(
+            selectedDifficulty = recipeData.difficulty,
+            onDifficultyChange = viewModel::updateDifficulty
+        )
+        
+        Spacer(modifier = Modifier.height(8.dp))
+        
+        // Dish Type
+        DishTypeCard(
+            selectedDishTypes = recipeData.dishTypes,
+            onDishTypesChange = viewModel::updateDishTypes
+        )
+        
+        Spacer(modifier = Modifier.height(8.dp))
+        
+        // Diet Type
+        DietTypeCard(
+            selectedDietTypes = recipeData.dietTypes,
+            onDietTypesChange = viewModel::updateDietTypes
+        )
+        
+        Spacer(modifier = Modifier.height(8.dp))
+        
+        // Hashtags
+        CustomTextField(
+            label = "#eat#food",
+            labelOrange = "HashTags",
+            value = recipeData.hashtags,
+            onValueChange = viewModel::updateHashtags
         )
     }
 }
 
-
-
 @Composable
-fun CustomTextFeild(label: String, labelOrange: String, recipeDesc: String , onValueChange: (String) -> Unit) {
-    Text(labelOrange,
-        style = MaterialTheme.typography.titleLarge,
-        color = Color.White,
-        modifier = Modifier
-            .background(Color(0xFFFF6339), shape = RoundedCornerShape(8.dp))
-            .padding(4.dp)
-
-    )
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = 16.dp)
-            .background(Color(0xFF4058A0), shape = RoundedCornerShape(topStart = 12.dp , bottomStart = 12.dp, topEnd = 12.dp, bottomEnd = 12.dp,))
-            .padding(16.dp)
-    ){
+fun CustomTextField(
+    label: String,
+    labelOrange: String,
+    value: String,
+    onValueChange: (String) -> Unit
+) {
+    OrangeLabel(labelOrange)
+    BlueContainer {
         OutlinedTextField(
-            value = recipeDesc,
+            value = value,
             onValueChange = onValueChange,
-            label = { Text(label , style = TextStyle(color = Color.Gray)) },
-            modifier = Modifier.fillMaxWidth()
+            label = { Text(label, style = TextStyle(color = Color.Gray)) },
+            modifier = Modifier
+                .fillMaxWidth()
                 .border(
                     width = 1.dp,
                     color = Color.White,
                     shape = RoundedCornerShape(20.dp)
-                ).background(Color.White)
+                )
+                .background(Color.White)
         )
     }
 }
 
-
-
 @Composable
-fun CustomIncremental(labelOrange: String, ) {
-    Text(labelOrange,
-        style = MaterialTheme.typography.titleLarge,
-        color = Color.White,
-        modifier = Modifier
-            .background(Color(0xFFFF6339), shape = RoundedCornerShape(8.dp))
-            .padding(4.dp)
-
-    )
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = 16.dp)
-            .background(Color(0xFF4058A0), shape = RoundedCornerShape(topStart = 12.dp , bottomStart = 12.dp, topEnd = 12.dp, bottomEnd = 12.dp,))
-            .padding(16.dp)
-    ){
-        Row {
+fun ServingsSection(
+    labelOrange: String,
+    servings: Int,
+    onServingsChange: (Int) -> Unit
+) {
+    OrangeLabel(labelOrange)
+    BlueContainer {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
             Text(
-               " Serving For",
-                style = TextStyle(color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold),
+                "Serving For",
+                style = TextStyle(
+                    color = Color.White, 
+                    fontSize = 16.sp, 
+                    fontWeight = FontWeight.Bold
+                ),
                 modifier = Modifier.padding(end = 8.dp)
             )
+            
             Icon(
                 painter = painterResource(R.drawable.minus),
-                contentDescription = "Increment",
+                contentDescription = "Decrement",
                 tint = Color.White,
                 modifier = Modifier
                     .size(30.dp)
                     .padding(end = 8.dp)
-                    .clickable {
+                    .clickable { 
+                        if (servings > 1) onServingsChange(servings - 1)
                     }
             )
-         Text(
-             text = "0",
-                style = TextStyle(color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold),
-         )
+            
+            Text(
+                text = servings.toString(),
+                style = TextStyle(
+                    color = Color.White, 
+                    fontSize = 16.sp, 
+                    fontWeight = FontWeight.Bold
+                ),
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
+            
             Icon(
                 painter = painterResource(R.drawable.add),
                 contentDescription = "Increment",
@@ -305,44 +467,41 @@ fun CustomIncremental(labelOrange: String, ) {
                 modifier = Modifier
                     .size(30.dp)
                     .padding(start = 8.dp)
-                    .clickable {
-                        // Increment logic here
+                    .clickable { 
+                        onServingsChange(servings + 1)
                     }
             )
+            
             Text(
-                modifier = Modifier.padding(8.dp),
                 text = "people",
-                style = TextStyle(color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold),
+                style = TextStyle(
+                    color = Color.White, 
+                    fontSize = 16.sp, 
+                    fontWeight = FontWeight.Bold
+                ),
+                modifier = Modifier.padding(start = 8.dp)
             )
         }
     }
 }
 
 @Composable
-fun customCookTime( labelOrange: String){
-    Text(labelOrange,
-        style = MaterialTheme.typography.titleLarge,
-        color = Color.White,
-        modifier = Modifier
-            .background(Color(0xFFFF6339), shape = RoundedCornerShape(8.dp))
-            .padding(4.dp)
-
-    )
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = 16.dp)
-            .background(Color(0xFF4058A0), shape = RoundedCornerShape(topStart = 12.dp , bottomStart = 12.dp, topEnd = 12.dp, bottomEnd = 12.dp,))
-            .padding(16.dp)
-    ){
-        Row (
+fun CookTimeSection(
+    labelOrange: String,
+    hours: String,
+    minutes: String,
+    onTimeChange: (String, String) -> Unit
+) {
+    OrangeLabel(labelOrange)
+    BlueContainer {
+        Row(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth()
-        ){
+        ) {
             OutlinedTextField(
-                value = "00",
-                onValueChange = { /* Handle time change */ },
+                value = hours,
+                onValueChange = { onTimeChange(it, minutes) },
                 modifier = Modifier
                     .border(
                         width = 1.dp,
@@ -351,20 +510,23 @@ fun customCookTime( labelOrange: String){
                     )
                     .width(168.dp)
                     .background(Color(0xFF4058A0))
-                    .padding(end=8.dp)
-                ,
+                    .padding(end = 8.dp),
                 suffix = {
                     Text(
                         text = "h",
-                        style = TextStyle(color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold),
+                        style = TextStyle(
+                            color = Color.White, 
+                            fontSize = 16.sp, 
+                            fontWeight = FontWeight.Bold
+                        ),
                         modifier = Modifier.padding(start = 8.dp)
                     )
                 }
-
             )
+            
             OutlinedTextField(
-                value = "00",
-                onValueChange = { /* Handle time change */ },
+                value = minutes,
+                onValueChange = { onTimeChange(hours, it) },
                 modifier = Modifier
                     .border(
                         width = 1.dp,
@@ -376,41 +538,26 @@ fun customCookTime( labelOrange: String){
                 suffix = {
                     Text(
                         text = "m",
-                        style = TextStyle(color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold),
+                        style = TextStyle(
+                            color = Color.White, 
+                            fontSize = 16.sp, 
+                            fontWeight = FontWeight.Bold
+                        ),
                         modifier = Modifier.padding(start = 8.dp)
                     )
                 }
-
             )
         }
     }
-
 }
 
 @Composable
-fun diffcuiltyCard(){
-    var selectedDifficulty by remember { mutableStateOf<String?>(null) }
-    Text("Difficulty",
-        style = MaterialTheme.typography.titleMedium,
-        color = Color.White,
-        modifier = Modifier
-            .background(Color(0xFFFF6339), shape = RoundedCornerShape(8.dp))
-            .padding(4.dp)
-
-    )
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = 16.dp)
-            .background(
-                Color(0xFF4058A0),
-                shape = RoundedCornerShape(
-                    topStart = 40.dp, bottomStart = 12.dp,
-                    topEnd = 12.dp, bottomEnd = 12.dp
-                )
-            )
-            .padding(16.dp)
-    ) {
+fun DifficultyCard(
+    selectedDifficulty: String?,
+    onDifficultyChange: (String?) -> Unit
+) {
+    OrangeLabel("Difficulty")
+    BlueContainerWithTopRadius {
         val difficulties = listOf("Easy", "Medium", "Professional")
 
         Row(
@@ -431,7 +578,7 @@ fun diffcuiltyCard(){
                             width = 1.dp,
                             shape = RoundedCornerShape(8.dp)
                         )
-                        .clickable { selectedDifficulty = diff }
+                        .clickable { onDifficultyChange(diff) }
                         .padding(horizontal = 12.dp, vertical = 8.dp)
                 ) {
                     Text(
@@ -443,165 +590,134 @@ fun diffcuiltyCard(){
             }
         }
     }
-
-}
-@Composable
-fun DishTypeCard(){
-    val dishTypes = listOf(
-        "BreakFast", "Launch", "Snack", "Brunch", "Dessert", "Dinner", "Appetizer"
-    )
-    val selectedDishTypes = remember { mutableStateListOf<String>() }
-
-    Text(
-        "Dish Type",
-        style = MaterialTheme.typography.titleMedium,
-        color = Color.White,
-        modifier = Modifier
-            .background(Color(0xFFFF6339), shape = RoundedCornerShape(8.dp))
-            .padding(4.dp)
-    )
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = 16.dp)
-            .background(
-                Color(0xFF4058A0),
-                shape = RoundedCornerShape(
-                    topStart = 40.dp, bottomStart = 12.dp,
-                    topEnd = 12.dp, bottomEnd = 12.dp
-                )
-            )
-            .padding(16.dp)
-    ) {
-        FlowRow(
-            mainAxisSpacing = 8.dp,
-            crossAxisSpacing = 8.dp,
-            mainAxisAlignment = MainAxisAlignment.Start
-        ) {
-            dishTypes.forEach { type ->
-                val isSelected = type in selectedDishTypes
-                Box(
-                    modifier = Modifier
-                        .background(
-                            if (isSelected) Color(0xFFDEE21B) else Color(0xFF4058A0),
-                            shape = RoundedCornerShape(8.dp)
-                        )
-                        .border(
-                            color = Color.White,
-                            width = 1.dp,
-                            shape = RoundedCornerShape(8.dp)
-                        )
-                        .clickable {
-                            if (isSelected) selectedDishTypes.remove(type)
-                            else selectedDishTypes.add(type)
-                        }
-                        .padding(8.dp)
-                ) {
-                    Text(
-                        text = type,
-                        color = if (isSelected) Color.Black else Color.White,
-                        fontSize = if (type.length > 8) 10.sp else 14.sp
-                    )
-                }
-            }
-        }
-    }
-}
-@Composable
-fun SuggestedDietCard(){
-    val dietType = listOf(
-        "Vegetarian", "High Fat", "Low Fat", "Sugar Free", "Lactose Free", "Gluten Free",
-    )
-    val selectedDietType = remember { mutableStateListOf<String>() }
-
-    Text(
-        "Diet Type",
-        style = MaterialTheme.typography.titleMedium,
-        color = Color.White,
-        modifier = Modifier
-            .background(Color(0xFFFF6339), shape = RoundedCornerShape(8.dp))
-            .padding(4.dp)
-    )
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = 16.dp)
-            .background(
-                Color(0xFF4058A0),
-                shape = RoundedCornerShape(
-                    topStart = 40.dp, bottomStart = 12.dp,
-                    topEnd = 12.dp, bottomEnd = 12.dp
-                )
-            )
-            .padding(16.dp)
-    ) {
-        FlowRow(
-            mainAxisSpacing = 8.dp,
-            crossAxisSpacing = 8.dp,
-            mainAxisAlignment = MainAxisAlignment.Start
-        ) {
-            dietType.forEach { type ->
-                val isSelected = type in selectedDietType
-                Box(
-                    modifier = Modifier
-                        .background(
-                            if (isSelected) Color(0xFFDEE21B) else Color(0xFF4058A0),
-                            shape = RoundedCornerShape(8.dp)
-                        )
-                        .border(
-                            color = Color.White,
-                            width = 1.dp,
-                            shape = RoundedCornerShape(8.dp)
-                        )
-                        .clickable {
-                            if (isSelected) selectedDietType.remove(type)
-                            else selectedDietType.add(type)
-                        }
-                        .padding(8.dp)
-                ) {
-                    Text(
-                        text = type,
-                        color = if (isSelected) Color.Black else Color.White,
-                        fontSize = if (type.length > 10) 8.sp else 12.sp
-                    )
-                }
-            }
-        }
-    }
 }
 
 @Composable
-fun CustomTextFeildHashtags(label: String, labelOrange: String, hashtage: String , onValueChange: (String) -> Unit) {
-    Text(labelOrange,
-        style = MaterialTheme.typography.titleLarge,
-        color = Color.White,
-        modifier = Modifier
-            .background(Color(0xFFFF6339), shape = RoundedCornerShape(8.dp))
-            .padding(4.dp)
-
-    )
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = 16.dp)
-            .background(Color(0xFF4058A0), shape = RoundedCornerShape(topStart = 12.dp , bottomStart = 12.dp, topEnd = 12.dp, bottomEnd = 12.dp,))
-            .padding(16.dp)
-    ){
-        OutlinedTextField(
-            value = hashtage,
-            onValueChange = onValueChange,
-            label = { Text(label , style = TextStyle(color = Color.Gray)) },
-            modifier = Modifier.fillMaxWidth()
-                .border(
-                    width = 1.dp,
-                    color = Color.White,
-                    shape = RoundedCornerShape(20.dp)
-                ).background(Color.White)
+fun DishTypeCard(
+    selectedDishTypes: Set<String>,
+    onDishTypesChange: (Set<String>) -> Unit
+) {
+    OrangeLabel("Dish Type")
+    BlueContainerWithTopRadius {
+        val dishTypes = listOf(
+            "BreakFast", "Launch", "Snack", "Brunch", "Dessert", "Dinner", "Appetizer"
         )
+
+        Column(
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // Split items into rows of 3
+            dishTypes.chunked(3).forEach { rowItems ->
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    rowItems.forEach { type ->
+                        val isSelected = type in selectedDishTypes
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .background(
+                                    if (isSelected) Color(0xFFDEE21B) else Color(0xFF4058A0),
+                                    shape = RoundedCornerShape(8.dp)
+                                )
+                                .border(
+                                    color = Color.White,
+                                    width = 1.dp,
+                                    shape = RoundedCornerShape(8.dp)
+                                )
+                                .clickable {
+                                    val newSelection = selectedDishTypes.toMutableSet()
+                                    if (isSelected) {
+                                        newSelection.remove(type)
+                                    } else {
+                                        newSelection.add(type)
+                                    }
+                                    onDishTypesChange(newSelection)
+                                }
+                                .padding(8.dp)
+                        ) {
+                            Text(
+                                text = type,
+                                color = if (isSelected) Color.Black else Color.White,
+                                fontSize = if (type.length > 8) 10.sp else 14.sp,
+                                modifier = Modifier.align(Alignment.Center)
+                            )
+                        }
+                    }
+                    // Fill empty spaces in the row
+                    repeat(3 - rowItems.size) {
+                        Spacer(modifier = Modifier.weight(1f))
+                    }
+                }
+            }
+        }
     }
 }
+
+@Composable
+fun DietTypeCard(
+    selectedDietTypes: Set<String>,
+    onDietTypesChange: (Set<String>) -> Unit
+) {
+    OrangeLabel("Diet Type")
+    BlueContainerWithTopRadius {
+        val dietTypes = listOf(
+            "Vegetarian", "High Fat", "Low Fat", "Sugar Free", "Lactose Free", "Gluten Free"
+        )
+
+        Column(
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // Split items into rows of 3
+            dietTypes.chunked(3).forEach { rowItems ->
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    rowItems.forEach { type ->
+                        val isSelected = type in selectedDietTypes
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .background(
+                                    if (isSelected) Color(0xFFDEE21B) else Color(0xFF4058A0),
+                                    shape = RoundedCornerShape(8.dp)
+                                )
+                                .border(
+                                    color = Color.White,
+                                    width = 1.dp,
+                                    shape = RoundedCornerShape(8.dp)
+                                )
+                                .clickable {
+                                    val newSelection = selectedDietTypes.toMutableSet()
+                                    if (isSelected) {
+                                        newSelection.remove(type)
+                                    } else {
+                                        newSelection.add(type)
+                                    }
+                                    onDietTypesChange(newSelection)
+                                }
+                                .padding(8.dp)
+                        ) {
+                            Text(
+                                text = type,
+                                color = if (isSelected) Color.Black else Color.White,
+                                fontSize = if (type.length > 10) 8.sp else 12.sp,
+                                modifier = Modifier.align(Alignment.Center)
+                            )
+                        }
+                    }
+                    // Fill empty spaces in the row
+                    repeat(3 - rowItems.size) {
+                        Spacer(modifier = Modifier.weight(1f))
+                    }
+                }
+            }
+        }
+    }
+}
+
 @Preview(showBackground = true, showSystemUi = true)
 @Composable
 fun AddNewRecipeStepperPreview() {

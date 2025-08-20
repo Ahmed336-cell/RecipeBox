@@ -24,14 +24,13 @@ import com.elm.recipebox.R
 @Composable
 fun SplashScreen(
     onSplashFinished: () -> Unit = {},
-    viewModel: SplashViewModel = viewModel ()
-
-){
+    viewModel: SplashViewModel = viewModel()
+) {
     val isFinished = viewModel.isSplashFinished.collectAsState()
-    LaunchedEffect(isFinished.value) {
-        if (isFinished.value) {
-            onSplashFinished()
-        }
+    
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.delay(2500) // Wait for splash duration + buffer
+        onSplashFinished()
     }
 
         Column (

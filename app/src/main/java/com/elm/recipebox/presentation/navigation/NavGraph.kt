@@ -25,15 +25,19 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.navArgument
 import com.elm.recipebox.R
 import com.elm.recipebox.presentation.collection.CollectionScreen
 import com.elm.recipebox.presentation.home.HomeScreen
 import com.elm.recipebox.presentation.onboarding.OnboardingScreen
 import com.elm.recipebox.presentation.profile.ProfileScreen
 import com.elm.recipebox.presentation.recipe.add.AddNewRecipeStepper
+import com.elm.recipebox.presentation.recipe.detail.RecipeDetail
+import com.elm.recipebox.presentation.recipe.detail.RecipeDetailScreen
 import com.elm.recipebox.presentation.search.SearchScreen
 import com.elm.recipebox.presentation.splash.SplashScreen
 
@@ -43,8 +47,15 @@ fun NavGraph(navController: NavHostController, startDestination: String) {
         composable(Screen.Splash.route) {
             SplashScreen(
                 onSplashFinished = {
-                    navController.navigate(Screen.Onboarding.route) {
-                        popUpTo(Screen.Splash.route) { inclusive = true }
+                    try {
+                        navController.navigate(Screen.Onboarding.route) {
+                            popUpTo(Screen.Splash.route) { inclusive = true }
+                        }
+                    } catch (e: Exception) {
+                        // Fallback navigation to home if onboarding fails
+                        navController.navigate(Screen.Home.route) {
+                            popUpTo(Screen.Splash.route) { inclusive = true }
+                        }
                     }
                 }
             )
@@ -60,9 +71,30 @@ fun NavGraph(navController: NavHostController, startDestination: String) {
         }
         composable(Screen.Home.route) { HomeScreen() }
         composable(Screen.Search.route) { SearchScreen() }
-        composable(Screen.Add.route) { AddNewRecipeStepper() }
+        composable(Screen.Add.route) { 
+            AddNewRecipeStepper(
+                onRecipeCreated = { recipeId ->
+                    // Navigate to recipe detail with the created recipe ID
+                    navController.navigate("${Screen.RecipeDetail.route}/$recipeId") {
+                        popUpTo(Screen.Add.route) { inclusive = true }
+                    }
+                }
+            )
+        }
         composable(Screen.Save.route) { CollectionScreen() }
         composable(Screen.Profile.route) { ProfileScreen() }
+        composable(
+            route = Screen.RecipeDetail.route + "/{recipeId}",
+            arguments = listOf(
+                navArgument("recipeId") { type = NavType.LongType }
+            )
+        ) { backStackEntry ->
+            val recipeId = backStackEntry.arguments?.getLong("recipeId") ?: 0L
+            RecipeDetailScreen(
+                recipeId = recipeId,
+                onBackClick = { navController.popBackStack() }
+            )
+        }
     }
 }
 
@@ -118,8 +150,9 @@ fun CustomBottomBar(navController: NavController) {
                                 Screen.Add -> painterResource(R.drawable.soup)
                                 Screen.Save -> painterResource(R.drawable.recipebook)
                                 Screen.Profile -> painterResource(R.drawable.user)
-                                Screen.Onboarding -> TODO()
-                                Screen.Splash -> TODO()
+                                Screen.Onboarding -> painterResource(R.drawable.home)
+                                Screen.Splash -> painterResource(R.drawable.home)
+                                Screen.RecipeDetail -> painterResource(R.drawable.home)
                             },
                             contentDescription = screen.route,
                             tint = Color.White,
@@ -141,8 +174,9 @@ fun CustomBottomBar(navController: NavController) {
                                 Screen.Add -> painterResource(R.drawable.soup)
                                 Screen.Save -> painterResource(R.drawable.recipebook)
                                 Screen.Profile -> painterResource(R.drawable.user)
-                                Screen.Onboarding -> TODO()
-                                Screen.Splash -> TODO()
+                                Screen.Onboarding -> painterResource(R.drawable.home)
+                                Screen.Splash -> painterResource(R.drawable.home)
+                                Screen.RecipeDetail -> painterResource(R.drawable.home)
                             },
                             contentDescription = screen.route,
                             tint = Color.LightGray

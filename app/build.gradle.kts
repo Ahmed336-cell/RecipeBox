@@ -3,7 +3,8 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
-
+    alias(libs.plugins.hilt)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 android {
@@ -60,6 +61,7 @@ dependencies {
     implementation(libs.material3)
     implementation(libs.androidx.animation.core.lint)
     implementation(libs.androidx.runtime)
+    implementation(libs.androidx.foundation)
     ksp(libs.androidx.room.compiler)
 
     // Lifecycle & ViewModel
@@ -71,6 +73,9 @@ dependencies {
 
     // Coroutines
     implementation(libs.kotlinx.coroutines.android)
+    
+    // JSON Serialization
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3")
 
     // Hilt
     implementation(libs.hilt.android)

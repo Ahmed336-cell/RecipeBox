@@ -1,4 +1,7 @@
 package com.elm.recipebox.domain.model
 
-class Ingredient {
-}
+data class Ingredient(
+    val id: Long = 0,
+    val name: String,
+    val order: Int = 0
+)

@@ -24,7 +24,9 @@ import com.elm.recipebox.presentation.navigation.Screen
 import com.elm.recipebox.presentation.onboarding.OnboardingScreen
 import com.elm.recipebox.presentation.splash.SplashScreen
 import com.elm.recipebox.ui.theme.RecipeBoxTheme
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -34,17 +36,19 @@ class MainActivity : ComponentActivity() {
             val navBackStackEntry by navController.currentBackStackEntryAsState()
             val currentRoute = navBackStackEntry?.destination?.route
 
-            Scaffold(
-                bottomBar = {
-                    if (currentRoute != Screen.Splash.route && currentRoute != Screen.Onboarding.route) {
-                        CustomBottomBar(navController)
+            RecipeBoxTheme {
+                Scaffold(
+                    bottomBar = {
+                        if (currentRoute != Screen.Splash.route && currentRoute != Screen.Onboarding.route) {
+                            CustomBottomBar(navController)
+                        }
                     }
+                ) { innerPadding ->
+                    NavGraph(
+                        navController = navController,
+                        startDestination = Screen.Splash.route
+                    )
                 }
-            ) { innerPadding ->
-                NavGraph(
-                    navController = navController,
-                    startDestination = Screen.Splash.route
-                )
             }
         }
     }
