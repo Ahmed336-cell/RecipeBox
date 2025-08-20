@@ -26,7 +26,6 @@ fun StepsSection(steps: List<String>, onChange: (List<String>) -> Unit) {
             .padding(16.dp)
             .verticalScroll(rememberScrollState())
     ) {
-        // Header
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -44,7 +43,6 @@ fun StepsSection(steps: List<String>, onChange: (List<String>) -> Unit) {
         
         Spacer(modifier = Modifier.height(16.dp))
         
-        // Steps List - Start with one empty card if list is empty
         val displaySteps = if (steps.isEmpty()) listOf("") else steps
         
         Column(
@@ -71,7 +69,6 @@ fun StepsSection(steps: List<String>, onChange: (List<String>) -> Unit) {
         
         Spacer(modifier = Modifier.height(16.dp))
         
-        // Add Button
         OutlinedButton(
             onClick = { 
                 val newList = displaySteps.toMutableList()

@@ -22,7 +22,6 @@ fun ConfirmScreen(recipeData: RecipeFormData) {
             .verticalScroll(rememberScrollState())
             .padding(16.dp)
     ) {
-        // Header
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -40,13 +39,11 @@ fun ConfirmScreen(recipeData: RecipeFormData) {
         
         Spacer(modifier = Modifier.height(16.dp))
         
-        // Recipe Name
         ConfirmSection(
             title = "Recipe Name",
             content = recipeData.title.ifEmpty { "Not specified" }
         )
         
-        // Description
         if (recipeData.description.isNotEmpty()) {
             ConfirmSection(
                 title = "Description",
@@ -54,13 +51,11 @@ fun ConfirmScreen(recipeData: RecipeFormData) {
             )
         }
         
-        // Servings
         ConfirmSection(
             title = "Servings",
             content = "${recipeData.servings} people"
         )
         
-        // Cook Time
         val cookTime = if (recipeData.cookTimeHours != "00" || recipeData.cookTimeMinutes != "00") {
             "${recipeData.cookTimeHours}h ${recipeData.cookTimeMinutes}m"
         } else {
@@ -71,7 +66,6 @@ fun ConfirmScreen(recipeData: RecipeFormData) {
             content = cookTime
         )
         
-        // Difficulty
         if (recipeData.difficulty != null) {
             ConfirmSection(
                 title = "Difficulty",
@@ -79,7 +73,6 @@ fun ConfirmScreen(recipeData: RecipeFormData) {
             )
         }
         
-        // Dish Types
         if (recipeData.dishTypes.isNotEmpty()) {
             ConfirmSection(
                 title = "Dish Types",
@@ -87,7 +80,6 @@ fun ConfirmScreen(recipeData: RecipeFormData) {
             )
         }
         
-        // Diet Types
         if (recipeData.dietTypes.isNotEmpty()) {
             ConfirmSection(
                 title = "Diet Types",
@@ -95,7 +87,6 @@ fun ConfirmScreen(recipeData: RecipeFormData) {
             )
         }
         
-        // Ingredients
         ConfirmSection(
             title = "Ingredients",
             content = if (recipeData.ingredients.isNotEmpty() && recipeData.ingredients.any { it.isNotEmpty() }) {
@@ -105,7 +96,6 @@ fun ConfirmScreen(recipeData: RecipeFormData) {
             }
         )
         
-        // Steps
         ConfirmSection(
             title = "Steps",
             content = if (recipeData.steps.isNotEmpty() && recipeData.steps.any { it.isNotEmpty() }) {

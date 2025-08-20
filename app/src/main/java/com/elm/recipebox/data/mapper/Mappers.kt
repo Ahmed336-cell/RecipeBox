@@ -6,7 +6,6 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 
-// Recipe mappers
 fun RecipeEntity.toDomain(): Recipe {
     return Recipe(
         id = id,
@@ -28,8 +27,8 @@ fun RecipeEntity.toDomain(): Recipe {
             emptySet()
         },
         imageUri = imageUri,
-        ingredients = emptyList(), // Will be populated from relations
-        steps = emptyList(), // Will be populated from relations
+        ingredients = emptyList(),
+        steps = emptyList(),
         createdAt = createdAt,
         updatedAt = updatedAt
     )
@@ -60,7 +59,6 @@ fun RecipeWithDetails.toDomain(): Recipe {
     )
 }
 
-// Ingredient mappers
 fun IngredientEntity.toDomain(): Ingredient {
     return Ingredient(
         id = id,
@@ -78,7 +76,6 @@ fun Ingredient.toEntity(recipeId: Long): IngredientEntity {
     )
 }
 
-// Step mappers
 fun StepEntity.toDomain(): Step {
     return Step(
         id = id,
@@ -96,7 +93,7 @@ fun Step.toEntity(recipeId: Long): StepEntity {
     )
 }
 
-// Collection mappers
+
 fun CollectionEntity.toDomain(): RecipeCollection {
     return RecipeCollection(
         id = id,

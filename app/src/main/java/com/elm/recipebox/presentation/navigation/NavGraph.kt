@@ -52,7 +52,6 @@ fun NavGraph(navController: NavHostController, startDestination: String) {
                             popUpTo(Screen.Splash.route) { inclusive = true }
                         }
                     } catch (e: Exception) {
-                        // Fallback navigation to home if onboarding fails
                         navController.navigate(Screen.Home.route) {
                             popUpTo(Screen.Splash.route) { inclusive = true }
                         }
@@ -70,11 +69,16 @@ fun NavGraph(navController: NavHostController, startDestination: String) {
             )
         }
         composable(Screen.Home.route) { HomeScreen() }
-        composable(Screen.Search.route) { SearchScreen() }
+        composable(Screen.Search.route) { 
+            SearchScreen(
+                onRecipeClick = { recipeId ->
+                    navController.navigate("${Screen.RecipeDetail.route}/$recipeId")
+                }
+            )
+        }
         composable(Screen.Add.route) { 
             AddNewRecipeStepper(
                 onRecipeCreated = { recipeId ->
-                    // Navigate to recipe detail with the created recipe ID
                     navController.navigate("${Screen.RecipeDetail.route}/$recipeId") {
                         popUpTo(Screen.Add.route) { inclusive = true }
                     }

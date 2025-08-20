@@ -74,11 +74,9 @@ interface RecipeDao {
     ) {
         updateRecipe(recipe.copy(updatedAt = System.currentTimeMillis()))
         
-        // Delete existing ingredients and steps
         deleteIngredientsForRecipe(recipe.id)
         deleteStepsForRecipe(recipe.id)
         
-        // Insert new ingredients and steps
         val ingredientsWithRecipeId = ingredients.mapIndexed { index, ingredient ->
             ingredient.copy(recipeId = recipe.id, order = index)
         }

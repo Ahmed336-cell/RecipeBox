@@ -160,7 +160,6 @@ fun OnboardingPageUI(
                         contentAlignment = Alignment.Center
                     ) {
                         Canvas(modifier = Modifier.size(60.dp)) {
-                            // خلفية الدائرة
                             drawArc(
                                 color = Color.White.copy(alpha = 0.3f),
                                 startAngle = -90f,
@@ -169,7 +168,6 @@ fun OnboardingPageUI(
                                 style = Stroke(width = 12f)
                             )
 
-                            // نسبة الإكتمال حسب الصفحة
                             val progress = (pageIndex + 1) / totalPages.toFloat()
                             val sweep = 360f * progress
 

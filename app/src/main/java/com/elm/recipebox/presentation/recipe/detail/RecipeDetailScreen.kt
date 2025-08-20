@@ -116,13 +116,11 @@ private fun RecipeDetailContent(
             .background(Color.White)
             .padding(bottom = 60.dp)
     ) {
-        // Image Header with overlay
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(200.dp)
         ) {
-            // Recipe Image
             Image(
                 painter = if (recipe.imageUri != null) {
                     rememberAsyncImagePainter(recipe.imageUri)
@@ -134,7 +132,6 @@ private fun RecipeDetailContent(
                 contentScale = ContentScale.Crop
             )
             
-            // Dark overlay
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -148,7 +145,6 @@ private fun RecipeDetailContent(
                     )
             )
             
-            // Top bar with back button and actions
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -199,7 +195,6 @@ private fun RecipeDetailContent(
             }
         }
         
-        // Recipe Title and Info Card
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -227,7 +222,6 @@ private fun RecipeDetailContent(
                 
                 Spacer(modifier = Modifier.height(8.dp))
                 
-                // Recipe meta info
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly
@@ -254,7 +248,6 @@ private fun RecipeDetailContent(
             }
         }
         
-        // Tab Row
         TabRow(
             selectedTabIndex = currentTab,
             modifier = Modifier.fillMaxWidth(),
@@ -284,7 +277,6 @@ private fun RecipeDetailContent(
             }
         }
         
-        // Tab Content
         when (currentTab) {
             0 -> IntroductionTab(recipeDetail)
             1 -> IngredientsTab(recipeDetail.ingredients)

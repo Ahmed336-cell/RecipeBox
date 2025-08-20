@@ -24,7 +24,6 @@ class AddRecipeUseCase @Inject constructor(
         stepDescriptions: List<String>
     ): Result<Long> {
         return try {
-            // Validate input
             if (title.isBlank()) {
                 return Result.failure(IllegalArgumentException("Recipe title cannot be empty"))
             }
@@ -37,7 +36,6 @@ class AddRecipeUseCase @Inject constructor(
                 return Result.failure(IllegalArgumentException("Recipe must have at least one step"))
             }
             
-            // Create ingredient objects
             val ingredients = ingredientNames
                 .filter { it.isNotBlank() }
                 .mapIndexed { index, name ->
@@ -47,7 +45,6 @@ class AddRecipeUseCase @Inject constructor(
                     )
                 }
             
-            // Create step objects
             val steps = stepDescriptions
                 .filter { it.isNotBlank() }
                 .mapIndexed { index, description ->
@@ -57,7 +54,6 @@ class AddRecipeUseCase @Inject constructor(
                     )
                 }
             
-            // Create recipe
             val recipe = Recipe(
                 title = title.trim(),
                 description = description.trim(),

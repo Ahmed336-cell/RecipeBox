@@ -29,7 +29,7 @@ fun SplashScreen(
     val isFinished = viewModel.isSplashFinished.collectAsState()
     
     LaunchedEffect(Unit) {
-        kotlinx.coroutines.delay(2500) // Wait for splash duration + buffer
+        kotlinx.coroutines.delay(2500)
         onSplashFinished()
     }
 

@@ -26,7 +26,6 @@ fun IngredientsSection(ingredients: List<String>, onChange: (List<String>) -> Un
             .padding(16.dp)
             .verticalScroll(rememberScrollState())
     ) {
-        // Header
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -44,7 +43,6 @@ fun IngredientsSection(ingredients: List<String>, onChange: (List<String>) -> Un
         
         Spacer(modifier = Modifier.height(16.dp))
         
-        // Ingredients List - Start with one empty card if list is empty
         val displayIngredients = if (ingredients.isEmpty()) listOf("") else ingredients
         
         Column(
@@ -71,7 +69,6 @@ fun IngredientsSection(ingredients: List<String>, onChange: (List<String>) -> Un
         
         Spacer(modifier = Modifier.height(16.dp))
         
-        // Add Button
         OutlinedButton(
             onClick = { 
                 val newList = displayIngredients.toMutableList()

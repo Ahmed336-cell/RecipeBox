@@ -5,6 +5,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -29,6 +30,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -44,6 +46,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -56,11 +59,22 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.elm.recipebox.R
 
 @Composable
-fun SearchScreen() {
+fun SearchScreen(
+    onRecipeClick: (Long) -> Unit = {}
+) {
+    val viewModel: SearchViewModel = hiltViewModel()
+    val searchQuery by viewModel.searchQuery.collectAsState()
+    val filteredRecipes by viewModel.filteredRecipes.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+    val selectedDifficulty by viewModel.selectedDifficulty.collectAsState()
+    val selectedDishTypes by viewModel.selectedDishTypes.collectAsState()
+    val maxCookTime by viewModel.maxCookTime.collectAsState()
+    
     var isFilterOpen by remember { mutableStateOf(false) }
 
     Box(
@@ -71,9 +85,17 @@ fun SearchScreen() {
         Column(modifier = Modifier
             .fillMaxWidth()
             .systemBarsPadding()) {
-            SearchBar(onFilterClick = { isFilterOpen = true })
+            SearchBar(
+                searchQuery = searchQuery,
+                onSearchQueryChange = viewModel::updateSearchQuery,
+                onFilterClick = { isFilterOpen = true }
+            )
 
-            SearchResults()
+            SearchResults(
+                recipes = filteredRecipes,
+                isLoading = isLoading,
+                onRecipeClick = onRecipeClick
+            )
         }
         AnimatedVisibility(
             visible = isFilterOpen ,
@@ -92,6 +114,13 @@ fun SearchScreen() {
                     )
             ) {
                 FilterDrawerContent(
+                    selectedDifficulty = selectedDifficulty,
+                    selectedDishTypes = selectedDishTypes,
+                    maxCookTime = maxCookTime,
+                    onDifficultyChange = viewModel::updateDifficulty,
+                    onDishTypesChange = viewModel::updateDishTypes,
+                    onCookTimeChange = viewModel::updateMaxCookTime,
+                    onClearFilters = viewModel::clearFilters,
                     onClose = { isFilterOpen = false }
                 )
             }
@@ -99,7 +128,11 @@ fun SearchScreen() {
     }
 }
 @Composable
-fun SearchBar(onFilterClick: () -> Unit){
+fun SearchBar(
+    searchQuery: String,
+    onSearchQueryChange: (String) -> Unit,
+    onFilterClick: () -> Unit
+){
     Box(
         modifier = androidx.compose.ui.Modifier
             .fillMaxWidth()
@@ -118,8 +151,8 @@ fun SearchBar(onFilterClick: () -> Unit){
                         contentDescription = "Search Icon"
                     )
                 },
-                value = "",
-                onValueChange = {},
+                value = searchQuery,
+                onValueChange = onSearchQueryChange,
                 placeholder = { Text("Search recipes") },
                 modifier = Modifier
                     .padding(vertical = 16.dp, horizontal = 8.dp)
@@ -155,30 +188,57 @@ fun SearchBar(onFilterClick: () -> Unit){
 
 
 @Composable
-fun  SearchResults() {
+fun SearchResults(
+    recipes: List<com.elm.recipebox.domain.model.Recipe>,
+    isLoading: Boolean,
+    onRecipeClick: (Long) -> Unit
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(8.dp)
     ) {
         Text(
-            text = "Recipes",
+            text = "Recipes (${recipes.size})",
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.padding(8.dp)
         )
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(2),
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(bottom = 70.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            items(recipeList) { recipe ->
-                RecipeCard(recipe)
+        if (isLoading) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
+        } else if (recipes.isEmpty()) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "No recipes found",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = Color.Gray
+                )
+            }
+        } else {
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(bottom = 70.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(recipes) { recipe ->
+                    RealRecipeCard(
+                        recipe = recipe,
+                        onClick = { onRecipeClick(recipe.id) }
+                    )
+                }
             }
         }
     }
@@ -190,6 +250,95 @@ data class Recipe(
     val imageUrl: String,
     val rating: Double
 )
+
+@Composable
+fun RealRecipeCard(
+    recipe: com.elm.recipebox.domain.model.Recipe,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .aspectRatio(0.8f)
+            .clip(RoundedCornerShape(12.dp))
+            .clickable { onClick() }
+    ) {
+        if (recipe.imageUri != null) {
+            AsyncImage(
+                model = recipe.imageUri,
+                contentDescription = recipe.title,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+        } else {
+            Image(
+                painter = painterResource(R.drawable.dish1),
+                contentDescription = recipe.title,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+        }
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.6f)),
+                        startY = 200f
+                    )
+                )
+        )
+
+        Row(
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(8.dp)
+                .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                .padding(horizontal = 6.dp, vertical = 2.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.star),
+                contentDescription = "Difficulty",
+                tint = Color.White,
+                modifier = Modifier.size(14.dp)
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(
+                text = recipe.difficulty ?: "Easy", 
+                color = Color.White, 
+                fontSize = 12.sp
+            )
+        }
+
+        Row(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(8.dp)
+                .background(Color(0xFFFF6339).copy(alpha = 0.8f), RoundedCornerShape(8.dp))
+                .padding(horizontal = 6.dp, vertical = 2.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "${recipe.cookTimeHours}h ${recipe.cookTimeMinutes}m",
+                color = Color.White,
+                fontSize = 10.sp
+            )
+        }
+
+        Text(
+            text = recipe.title,
+            color = Color.White,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Medium,
+            maxLines = 2,
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .padding(8.dp)
+        )
+    }
+}
 
 @Composable
 fun RecipeCard(recipe: Recipe) {
@@ -247,29 +396,22 @@ fun RecipeCard(recipe: Recipe) {
     }
 }
 
-val recipeList = listOf(
-    Recipe("chocolate cake with buttercream frosting",
-        "https://picsum.photos/200/300?1", 4.8),
-    Recipe("chocolate cake with buttercream frosting",
-        "https://picsum.photos/200/300?2", 4.8),
-    Recipe("chocolate cake with buttercream frosting",
-        "https://picsum.photos/200/300?3", 4.8),
-    Recipe("chocolate cake with buttercream frosting",
-        "https://picsum.photos/200/300?4", 4.8),
-    Recipe("chocolate cake with buttercream frosting",
-        "https://picsum.photos/200/300?5", 4.8),
-    Recipe("chocolate cake with buttercream frosting",
-        "https://picsum.photos/200/300?6", 4.8),
-)
 
 @Composable
-fun FilterDrawerContent(onClose: () -> Unit) {
+fun FilterDrawerContent(
+    selectedDifficulty: String?,
+    selectedDishTypes: Set<String>,
+    maxCookTime: Int,
+    onDifficultyChange: (String?) -> Unit,
+    onDishTypesChange: (Set<String>) -> Unit,
+    onCookTimeChange: (Int) -> Unit,
+    onClearFilters: () -> Unit,
+    onClose: () -> Unit
+) {
     val dishTypes = listOf(
         "BreakFast", "Launch", "Snack", "Brunch", "Dessert", "Dinner", "Appetizer"
     )
-    var selectedDifficulty by remember { mutableStateOf<String?>(null) }
-    val selectedDishTypes = remember { mutableStateListOf<String>() }
-    var sliderState by remember { mutableFloatStateOf(0.5f) }
+    val sliderState = maxCookTime / 60f
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -319,7 +461,7 @@ fun FilterDrawerContent(onClose: () -> Unit) {
                 Slider(
                     valueRange= 0f..1f,
                     value = sliderState,
-                    onValueChange = { sliderState = it },
+                    onValueChange = { onCookTimeChange((it * 60).toInt()) },
                     colors = SliderDefaults.colors(
                         thumbColor = Color(0xFFDEE21B),
                         activeTrackColor = Color(0xFFDEE21B),
@@ -330,7 +472,7 @@ fun FilterDrawerContent(onClose: () -> Unit) {
                     enabled = true,
                 )
                 Text(
-                    text = "${(sliderState * 60).toInt()} minutes",
+                    text = "$maxCookTime minutes",
                     style = TextStyle(color = Color.White, fontSize = 14.sp),
                     modifier = Modifier.padding(top = 8.dp)
                         .align(Alignment.CenterHorizontally)
@@ -381,7 +523,9 @@ fun FilterDrawerContent(onClose: () -> Unit) {
                                 width = 1.dp,
                                 shape = RoundedCornerShape(8.dp)
                             )
-                            .clickable { selectedDifficulty = diff }
+                            .clickable { 
+                                onDifficultyChange(if (selectedDifficulty == diff) null else diff)
+                            }
                             .padding(horizontal = 12.dp, vertical = 8.dp)
                     ) {
                         Text(
@@ -434,11 +578,13 @@ fun FilterDrawerContent(onClose: () -> Unit) {
                                 shape = RoundedCornerShape(8.dp)
                             )
                             .clickable {
+                                val newSet = selectedDishTypes.toMutableSet()
                                 if (isSelected) {
-                                    selectedDishTypes.remove(type)
+                                    newSet.remove(type)
                                 } else {
-                                    selectedDishTypes.add(type)
+                                    newSet.add(type)
                                 }
+                                onDishTypesChange(newSet)
                             }
                             .padding(8.dp)
                     ) {
@@ -460,10 +606,7 @@ fun FilterDrawerContent(onClose: () -> Unit) {
         ) {
             Button(
                 onClick = {
-                    selectedDifficulty = null
-                    selectedDishTypes.clear()
-                    sliderState = 0.5f
-                    onClose()
+                    onClearFilters()
                 },
                 border = BorderStroke(1.dp, Color.Black),
                 colors = ButtonDefaults.buttonColors(containerColor = Color.White ,)
@@ -483,5 +626,14 @@ fun FilterDrawerContent(onClose: () -> Unit) {
 @Preview(showBackground = true , name = "SearchScreenPreview")
 @Composable
 fun PreviewSearchScreen() {
-    FilterDrawerContent (onClose = {})
+    FilterDrawerContent(
+        selectedDifficulty = null,
+        selectedDishTypes = emptySet(),
+        maxCookTime = 60,
+        onDifficultyChange = {},
+        onDishTypesChange = {},
+        onCookTimeChange = {},
+        onClearFilters = {},
+        onClose = {}
+    )
 }

@@ -37,10 +37,8 @@ class CollectionRepositoryImpl @Inject constructor(
     }
     
     override suspend fun addRecipeToCollection(recipeId: Long, collectionId: Long) {
-        // Implementation would go here - not needed for current task
     }
     
     override suspend fun removeRecipeFromCollection(recipeId: Long, collectionId: Long) {
-        // Implementation would go here - not needed for current task
     }
 }

@@ -44,7 +44,6 @@ import androidx.compose.ui.unit.sp
 import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
 
-// Reusable composable functions
 @Composable
 fun OrangeLabel(text: String) {
     Text(
@@ -115,7 +114,6 @@ fun AddNewRecipeStepper(
     val currentStep by viewModel.currentStep.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
     
-    // Handle UI state changes
     LaunchedEffect(uiState.isSuccess) {
         if (uiState.isSuccess) {
             uiState.createdRecipeId?.let { recipeId ->
@@ -124,10 +122,8 @@ fun AddNewRecipeStepper(
         }
     }
     
-    // Show error if any
     uiState.error?.let { error ->
         LaunchedEffect(error) {
-            // Show error snackbar or dialog
             viewModel.clearError()
         }
     }
@@ -252,7 +248,6 @@ fun DetailsSection(
             .fillMaxWidth()
             .verticalScroll(rememberScrollState())
     ) {
-        // Image Section
         Card(
             modifier = Modifier
                 .fillMaxWidth()
@@ -297,7 +292,6 @@ fun DetailsSection(
                     }
                 }
                 
-                // Floating action button for image selection
                 FloatingActionButton(
                     onClick = { galleryLauncher.launch("image/*") },
                     modifier = Modifier
@@ -318,7 +312,6 @@ fun DetailsSection(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Recipe Name
         CustomTextField(
             label = "Recipe Name",
             labelOrange = "Name",
@@ -328,7 +321,6 @@ fun DetailsSection(
         
         Spacer(modifier = Modifier.height(8.dp))
         
-        // Recipe Description
         CustomTextField(
             label = "Recipe Description",
             labelOrange = "Description",
@@ -338,7 +330,6 @@ fun DetailsSection(
         
         Spacer(modifier = Modifier.height(8.dp))
         
-        // Servings
         ServingsSection(
             labelOrange = "Number",
             servings = recipeData.servings,
@@ -347,7 +338,6 @@ fun DetailsSection(
         
         Spacer(modifier = Modifier.height(8.dp))
         
-        // Cook Time
         CookTimeSection(
             labelOrange = "Cook Time",
             hours = recipeData.cookTimeHours,
@@ -357,7 +347,6 @@ fun DetailsSection(
         
         Spacer(modifier = Modifier.height(8.dp))
         
-        // Difficulty
         DifficultyCard(
             selectedDifficulty = recipeData.difficulty,
             onDifficultyChange = viewModel::updateDifficulty
@@ -365,7 +354,6 @@ fun DetailsSection(
         
         Spacer(modifier = Modifier.height(8.dp))
         
-        // Dish Type
         DishTypeCard(
             selectedDishTypes = recipeData.dishTypes,
             onDishTypesChange = viewModel::updateDishTypes
@@ -381,7 +369,6 @@ fun DetailsSection(
         
         Spacer(modifier = Modifier.height(8.dp))
         
-        // Hashtags
         CustomTextField(
             label = "#eat#food",
             labelOrange = "HashTags",
@@ -606,7 +593,6 @@ fun DishTypeCard(
         Column(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // Split items into rows of 3
             dishTypes.chunked(3).forEach { rowItems ->
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -645,7 +631,6 @@ fun DishTypeCard(
                             )
                         }
                     }
-                    // Fill empty spaces in the row
                     repeat(3 - rowItems.size) {
                         Spacer(modifier = Modifier.weight(1f))
                     }
@@ -669,7 +654,6 @@ fun DietTypeCard(
         Column(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // Split items into rows of 3
             dietTypes.chunked(3).forEach { rowItems ->
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -708,7 +692,6 @@ fun DietTypeCard(
                             )
                         }
                     }
-                    // Fill empty spaces in the row
                     repeat(3 - rowItems.size) {
                         Spacer(modifier = Modifier.weight(1f))
                     }

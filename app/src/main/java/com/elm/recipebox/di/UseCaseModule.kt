@@ -25,5 +25,4 @@ object UseCaseModule {
         return GetRecipeByIdUseCase(repository)
     }
     
-    // Other use cases will be added when needed
 }
