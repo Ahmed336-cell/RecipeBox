@@ -3,16 +3,25 @@ package com.elm.recipebox.data.local.dao
 import androidx.room.*
 import com.elm.recipebox.data.local.entity.CollectionEntity
 import com.elm.recipebox.data.local.entity.RecipeCollectionCrossRef
+import com.elm.recipebox.data.local.entity.CollectionWithRecipes
 import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface CollectionDao {
+    
+    @Transaction
+    @Query("SELECT * FROM collections ORDER BY createdAt DESC")
+    fun getAllCollectionsWithRecipes(): Flow<List<CollectionWithRecipes>>
     
     @Query("SELECT * FROM collections ORDER BY createdAt DESC")
     fun getAllCollections(): Flow<List<CollectionEntity>>
     
     @Query("SELECT * FROM collections WHERE id = :collectionId")
     suspend fun getCollectionById(collectionId: Long): CollectionEntity?
+    
+    @Transaction
+    @Query("SELECT * FROM collections WHERE id = :collectionId")
+    suspend fun getCollectionWithRecipes(collectionId: Long): CollectionWithRecipes?
     
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertCollection(collection: CollectionEntity): Long
@@ -31,4 +40,10 @@ interface CollectionDao {
     
     @Query("SELECT * FROM recipe_collection_cross_ref WHERE collectionId = :collectionId")
     suspend fun getRecipesInCollection(collectionId: Long): List<RecipeCollectionCrossRef>
+    
+    @Query("SELECT COUNT(*) FROM recipe_collection_cross_ref WHERE collectionId = :collectionId")
+    suspend fun getRecipeCountInCollection(collectionId: Long): Int
+    
+    @Query("SELECT EXISTS(SELECT 1 FROM recipe_collection_cross_ref WHERE recipeId = :recipeId AND collectionId = :collectionId)")
+    suspend fun isRecipeInCollection(recipeId: Long, collectionId: Long): Boolean
 }

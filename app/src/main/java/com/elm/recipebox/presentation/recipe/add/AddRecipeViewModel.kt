@@ -40,7 +40,7 @@ class AddRecipeViewModel @Inject constructor(
 
     private companion object {
         const val MIN_STEP = 0
-        const val MAX_STEP = 3 // 0..3 -> 4 steps
+        const val MAX_STEP = 3
     }
 
     private val _recipeData = MutableStateFlow(RecipeFormData())
@@ -140,7 +140,6 @@ class AddRecipeViewModel @Inject constructor(
     }
 
     fun saveRecipe() {
-        // Guard: prevent double submits
         if (_uiState.value.isLoading) return
 
         if (!validateRecipe()) {
@@ -191,7 +190,6 @@ class AddRecipeViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(error = null)
     }
 
-    // Call this after the UI navigates using createdRecipeId to avoid repeated navigation on recomposition
     fun consumeSuccess() {
         _uiState.value = _uiState.value.copy(isSuccess = false, createdRecipeId = null)
     }

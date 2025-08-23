@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -49,6 +50,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.elm.recipebox.R
 import com.elm.recipebox.ui.theme.basicColor
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.lazy.LazyRow
 
 @Composable
 fun SearchScreen(
@@ -61,6 +64,7 @@ fun SearchScreen(
     val selectedDifficulty by viewModel.selectedDifficulty.collectAsState()
     val selectedDishTypes by viewModel.selectedDishTypes.collectAsState()
     val maxCookTime by viewModel.maxCookTime.collectAsState()
+    val sortBy by viewModel.sortBy.collectAsState()
 
     var isFilterOpen by rememberSaveable { mutableStateOf(false) }
     val focusManager = LocalFocusManager.current
@@ -70,7 +74,6 @@ fun SearchScreen(
             .fillMaxSize()
             .systemBarsPadding()
     ) {
-        // Main content
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -85,6 +88,13 @@ fun SearchScreen(
                 }
             )
 
+            SavedRecipesHeader(
+                totalRecipes = filteredRecipes.size,
+                searchQuery = searchQuery
+            )
+
+
+
             SearchResults(
                 recipes = filteredRecipes,
                 isLoading = isLoading,
@@ -92,7 +102,6 @@ fun SearchScreen(
             )
         }
 
-        // Scrim ABOVE content but BELOW drawer, so it doesn't block the drawer
         if (isFilterOpen) {
             Box(
                 modifier = Modifier
@@ -108,7 +117,6 @@ fun SearchScreen(
             )
         }
 
-        // Drawer (topmost)
         AnimatedVisibility(
             modifier = Modifier
                 .align(Alignment.TopEnd)
@@ -221,33 +229,30 @@ fun SearchResults(
             .fillMaxSize()
             .padding(horizontal = 8.dp, vertical = 8.dp)
     ) {
-        Text(
-            text = "Recipes (${recipes.size})",
-            style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.padding(8.dp)
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
         when {
             isLoading -> {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
-                ) { CircularProgressIndicator() }
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        CircularProgressIndicator(
+                            color = Color(0xFF4058A0)
+                        )
+                        Text(
+                            text = "Loading your recipes...",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = Color.Gray
+                        )
+                    }
+                }
             }
 
             recipes.isEmpty() -> {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "No recipes found",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = Color.Gray
-                    )
-                }
+                EmptyRecipesState()
             }
 
             else -> {
@@ -271,6 +276,87 @@ fun SearchResults(
 }
 
 @Composable
+fun EmptyRecipesState() {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = Modifier.padding(32.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(80.dp)
+                    .background(
+                        Color(0xFFF0F0F0),
+                        CircleShape
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.recipebook),
+                    contentDescription = "No Recipes",
+                    modifier = Modifier.size(40.dp),
+                    tint = Color.Gray
+                )
+            }
+
+            Text(
+                text = "No recipes yet",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF4058A0)
+            )
+
+            Text(
+                text = "Start building your recipe collection by adding your first recipe!",
+                style = MaterialTheme.typography.bodyLarge,
+                color = Color.Gray,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            )
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        Color(0xFFF8F9FA),
+                        RoundedCornerShape(12.dp)
+                    )
+                    .padding(16.dp)
+            ) {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = "Tips to get started:",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color(0xFF4058A0)
+                    )
+                    Text(
+                        text = "Add your favorite family recipes",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.Gray
+                    )
+                    Text(
+                        text = "Save recipes you find online",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.Gray
+                    )
+                    Text(
+                        text = "Organize recipes by collections",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.Gray
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
 fun RealRecipeCard(
     recipe: com.elm.recipebox.domain.model.Recipe,
     onClick: () -> Unit
@@ -281,6 +367,11 @@ fun RealRecipeCard(
             .aspectRatio(0.8f)
             .clip(RoundedCornerShape(12.dp))
             .clickable { onClick() }
+            .border(
+                width = 1.dp,
+                color = Color.LightGray.copy(alpha = 0.3f),
+                shape = RoundedCornerShape(12.dp)
+            )
     ) {
         if (recipe.imageUri != null) {
             AsyncImage(
@@ -298,7 +389,6 @@ fun RealRecipeCard(
             )
         }
 
-        // bottom gradient overlay for legibility
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -310,12 +400,11 @@ fun RealRecipeCard(
                 )
         )
 
-        // Difficulty chip
         Row(
             modifier = Modifier
                 .align(Alignment.TopStart)
                 .padding(8.dp)
-                .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                .background(Color.Black.copy(alpha = 0.7f), RoundedCornerShape(8.dp))
                 .padding(horizontal = 6.dp, vertical = 2.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -329,11 +418,11 @@ fun RealRecipeCard(
             Text(
                 text = recipe.difficulty ?: "Easy",
                 color = Color.White,
-                fontSize = 12.sp
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium
             )
         }
 
-        // Cook time chip
         Row(
             modifier = Modifier
                 .align(Alignment.TopEnd)
@@ -345,21 +434,71 @@ fun RealRecipeCard(
             Text(
                 text = "${recipe.cookTimeHours}h ${recipe.cookTimeMinutes}m",
                 color = Color.White,
-                fontSize = 10.sp
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Medium
             )
         }
+        if (recipe.servings > 0) {
+            Row(
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(start = 8.dp, bottom = 40.dp)
+                    .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(6.dp))
+                    .padding(horizontal = 4.dp, vertical = 2.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "👥 ${recipe.servings}",
+                    color = Color.White,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+        }
 
-        // Title
-        Text(
-            text = recipe.title,
-            color = Color.White,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Medium,
-            maxLines = 2,
+        Column(
             modifier = Modifier
                 .align(Alignment.BottomStart)
                 .padding(8.dp)
-        )
+        ) {
+            Text(
+                text = recipe.title,
+                color = Color.White,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 2,
+                lineHeight = 16.sp
+            )
+            
+            if (recipe.description.isNotBlank()) {
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = recipe.description,
+                    color = Color.White.copy(alpha = 0.9f),
+                    fontSize = 11.sp,
+                    maxLines = 1,
+                    lineHeight = 12.sp
+                )
+            }
+        }
+
+        if (recipe.dishTypes.isNotEmpty()) {
+            val firstDishType = recipe.dishTypes.first()
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 8.dp, bottom = 40.dp)
+                    .background(Color(0xFF4058A0).copy(alpha = 0.8f), RoundedCornerShape(6.dp))
+                    .padding(horizontal = 6.dp, vertical = 2.dp)
+            ) {
+                Text(
+                    text = firstDishType,
+                    color = Color.White,
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+        }
     }
 }
 
@@ -383,7 +522,6 @@ fun FilterDrawerContent(
             .fillMaxSize()
             .padding(16.dp)
     ) {
-        // Header
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -408,7 +546,6 @@ fun FilterDrawerContent(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Cook Time
         Text(
             "Cook Time",
             style = MaterialTheme.typography.titleMedium,
@@ -430,7 +567,6 @@ fun FilterDrawerContent(
                 .padding(16.dp)
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                // Use minutes directly (0..240) for finer control
                 Slider(
                     valueRange = 0f..240f,
                     value = maxCookTime.toFloat(),
@@ -450,7 +586,6 @@ fun FilterDrawerContent(
             }
         }
 
-        // Difficulty
         Text(
             "Difficulty",
             style = MaterialTheme.typography.titleMedium,
@@ -585,3 +720,88 @@ fun FilterDrawerContent(
         }
     }
 }
+
+@Composable
+fun SavedRecipesHeader(
+    totalRecipes: Int,
+    searchQuery: String
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                Color(0xFFF5F5F5),
+                shape = RoundedCornerShape(bottomStart = 16.dp, bottomEnd = 16.dp)
+            )
+            .padding(16.dp)
+    ) {
+        Column {
+            if (searchQuery.isBlank()) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            text = "Your Recipe Collection",
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF4058A0)
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "$totalRecipes recipes saved",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color.Gray
+                        )
+                    }
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .background(
+                                    Color(0xFFDEE21B),
+                                    CircleShape
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = totalRecipes.toString(),
+                                color = Color.Black,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp
+                            )
+                        }
+                    }
+                }
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            text = "Search Results",
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF4058A0)
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "$totalRecipes recipes found for \"$searchQuery\"",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color.Gray
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+

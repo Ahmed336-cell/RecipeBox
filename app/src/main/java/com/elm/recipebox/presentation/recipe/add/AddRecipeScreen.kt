@@ -69,7 +69,7 @@ import androidx.compose.ui.zIndex
 import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
 
-private val BottomBarHeight = 88.dp // Height of your CustomBottomBar
+private val BottomBarHeight = 88.dp
 
 @Composable
 fun OrangeLabel(text: String) {
@@ -197,7 +197,7 @@ fun AddNewRecipeStepper(
         FloatingStepperButtons(
             currentStep = currentStep,
             canGoBack = currentStep > 0,
-            canGoNext = true,  // Changed
+            canGoNext = true,
             isSaving = uiState.isLoading,
             onBack = viewModel::previousStep,
             onNext = {
@@ -224,14 +224,12 @@ private fun BoxScope.FloatingStepperButtons(
     onBack: () -> Unit,
     onNext: () -> Unit
 ) {
-    // Floating, always on top, visibly ABOVE the custom bottom bar and keyboard
     Row(
         modifier = Modifier
-            .zIndex(100f)                // ensure above screen content
+            .zIndex(100f)
             .align(Alignment.BottomCenter)
-            .navigationBarsPadding()     // respect system nav
-            .imePadding()                // respect keyboard
-            // Place the buttons above your app bottom bar: its height + extra gap
+            .navigationBarsPadding()
+            .imePadding()
             .padding(bottom = BottomBarHeight + 16.dp)
             .background(
                 Color.White.copy(alpha = 0.98f),

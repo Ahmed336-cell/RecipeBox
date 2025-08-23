@@ -3,7 +3,7 @@ package com.elm.recipebox.presentation.recipe.detail
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.elm.recipebox.domain.model.Recipe
-import com.elm.recipebox.domain.usecase.GetRecipeByIdUseCase
+import com.elm.recipebox.domain.usecase.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -13,7 +13,9 @@ import javax.inject.Inject
 
 @HiltViewModel
 class RecipeDetailViewModel @Inject constructor(
-    private val getRecipeByIdUseCase: GetRecipeByIdUseCase
+    private val getRecipeByIdUseCase: GetRecipeByIdUseCase,
+    private val createCollectionUseCase: CreateCollectionUseCase,
+    private val addToCollectionUseCase: AddToCollectionUseCase
 ) : ViewModel() {
     
     private val _recipe = MutableStateFlow<Recipe?>(null)
@@ -32,6 +34,26 @@ class RecipeDetailViewModel @Inject constructor(
             } catch (e: Exception) {
                 _uiState.value = RecipeDetailUiState.Error(e.message ?: "Unknown error")
             }
+        }
+    }
+    
+    fun createCollection(name: String, description: String) {
+        viewModelScope.launch {
+            createCollectionUseCase(name, description)
+                .onSuccess { collectionId ->
+                }
+                .onFailure { exception ->
+             }
+        }
+    }
+    
+    fun saveRecipeToCollection(recipeId: Long, collectionId: Long) {
+        viewModelScope.launch {
+            addToCollectionUseCase(recipeId, collectionId)
+                .onSuccess {
+                }
+                .onFailure { exception ->
+                }
         }
     }
 }

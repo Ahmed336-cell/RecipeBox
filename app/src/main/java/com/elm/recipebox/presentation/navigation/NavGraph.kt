@@ -42,6 +42,7 @@ import com.elm.recipebox.presentation.recipe.detail.RecipeDetailScreen
 import com.elm.recipebox.presentation.search.SearchScreen
 import com.elm.recipebox.presentation.splash.SplashScreen
 import androidx.compose.ui.draw.alpha
+import com.elm.recipebox.presentation.collection.CollectionDetailScreen
 
 
 @Composable
@@ -80,7 +81,13 @@ fun NavGraph(navController: NavHostController, startDestination: String) {
                 }
             })
         }
-        composable(Screen.Save.route) { CollectionScreen() }
+        composable(Screen.Save.route) {
+            CollectionScreen(
+                onCollectionClick = { collectionId ->
+                    navController.navigate("${Screen.CollectionDetail.route}/$collectionId")
+                }
+            )
+        }
         composable(Screen.Profile.route) { ProfileScreen() }
         composable(route = Screen.RecipeDetail.route + "/{recipeId}",
             arguments = listOf(navArgument("recipeId") {
@@ -88,6 +95,26 @@ fun NavGraph(navController: NavHostController, startDestination: String) {
             })) { backStackEntry ->
             val recipeId = backStackEntry.arguments?.getLong("recipeId") ?: 0L
             RecipeDetailScreen(recipeId = recipeId, onBackClick = { navController.popBackStack() })
+        }
+        composable(route = Screen.CollectionDetail.route + "/{collectionId}",
+            arguments = listOf(navArgument("collectionId") {
+                type = NavType.LongType
+            })) { backStackEntry ->
+            val collectionId = backStackEntry.arguments?.getLong("collectionId") ?: 0L
+            CollectionDetailScreen(
+                collectionId = collectionId,
+                onBackClick = { navController.popBackStack() },
+                onRecipeClick = { recipeId ->
+                    navController.navigate("${Screen.RecipeDetail.route}/$recipeId")
+                },
+                onEditCollection = { collection ->
+                    // Handle edit collection - could navigate to edit screen or show dialog
+                },
+                onDeleteCollection = { collection ->
+                    // Handle delete collection and navigate back
+                    navController.popBackStack()
+                }
+            )
         }
     }
 }
