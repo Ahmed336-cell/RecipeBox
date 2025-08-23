@@ -29,17 +29,26 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Outline
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathFillType
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.elm.recipebox.R
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 @Composable
@@ -72,29 +81,21 @@ fun OnboardingScreen(
 
     // Animated progress for the circular indicator (0f..1f)
     val pageProgress = remember { Animatable(0f) }
-
     val isLastPage by derivedStateOf { pagerState.currentPage == pages.lastIndex }
 
     // Auto-advance with animated arc per page, but stop on last page
     LaunchedEffect(pagerState.currentPage) {
-        // Reset progress for the new page
         pageProgress.snapTo(0f)
-
         if (!isLastPage) {
-            // Animate progress over N milliseconds, then move to next page if still on same page
             val myPage = pagerState.currentPage
             pageProgress.animateTo(
                 targetValue = 1f,
                 animationSpec = tween(durationMillis = 3500, easing = FastOutSlowInEasing)
             )
-            // If user didn't manually swipe away during the animation, advance
             if (pagerState.currentPage == myPage) {
-                scope.launch {
-                    pagerState.animateScrollToPage(myPage + 1)
-                }
+                scope.launch { pagerState.animateScrollToPage(myPage + 1) }
             }
         } else {
-            // On the last page, keep the ring full
             pageProgress.snapTo(1f)
         }
     }
@@ -112,9 +113,7 @@ fun OnboardingScreen(
                 if (page == pages.lastIndex) {
                     onFinish()
                 } else {
-                    scope.launch {
-                        pagerState.animateScrollToPage(page + 1)
-                    }
+                    scope.launch { pagerState.animateScrollToPage(page + 1) }
                 }
             }
         )
@@ -132,7 +131,7 @@ fun OnboardingPageUI(
     page: OnboardingPage,
     pageIndex: Int,
     totalPages: Int,
-    progress: Float, // 0f..1f animated
+    progress: Float,
     onIndicatorClick: () -> Unit
 ) {
     Box(
@@ -143,12 +142,11 @@ fun OnboardingPageUI(
     ) {
         Column(
             modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.SpaceBetween,
+            verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Images block
             Column(
                 verticalArrangement = Arrangement.spacedBy(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
@@ -165,66 +163,143 @@ fun OnboardingPageUI(
                 }
             }
 
-            // Text + indicator
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = page.text,
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold,
+            MessagePanelWithDockedIndicator(
+                text = page.text,
+                panelColor = Color.Black,
+                backgroundColor = page.background,
+                progress = progress,
+                isLast = pageIndex == totalPages - 1,
+                onClick = onIndicatorClick,
+                modifier = Modifier.size(350.dp)
+            )
+        }
+    }
+}
+
+
+@Composable
+private fun MessagePanelWithDockedIndicator(
+    text: String,
+    panelColor: Color,
+    backgroundColor: Color,
+    progress: Float,
+    isLast: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    cornerRadius: Dp = 24.dp,
+    notchRadius: Dp = 44.dp,
+    indicatorSize: Dp = 92.dp,
+    indicatorRingWidth: Dp = 3.dp,
+    indicatorProgressWidth: Dp = 8.dp
+) {
+    Box(
+        modifier = modifier.padding(top = 60.dp),
+        contentAlignment = Alignment.BottomCenter
+    ) {
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(bottom = indicatorSize / 2)
+                .background(
+                    color = panelColor,
+                    shape = NotchedRoundedRectShape(
+                        cornerRadius = cornerRadius,
+                        notchRadius = notchRadius
+                    )
+                )
+                .padding(horizontal = 20.dp, vertical = 24.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = text,
+                fontSize = 34.sp,
+                lineHeight = 40.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .padding(horizontal = 8.dp)
+            )
+        }
+
+        // Docked circular progress button
+        Box(
+            modifier = Modifier
+                .size(indicatorSize)
+                .clip(CircleShape)
+                .background(backgroundColor)
+                .clickable { onClick() },
+            contentAlignment = Alignment.Center
+        ) {
+            Canvas(modifier = Modifier.size(indicatorSize)) {
+                val ring = indicatorRingWidth.toPx()
+                val prog = indicatorProgressWidth.toPx()
+
+                // Outer thin ring
+                drawCircle(
                     color = Color.White,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier
-                        .background(Color.Black, shape = MaterialTheme.shapes.medium)
-                        .padding(35.dp)
+                    style = Stroke(width = ring)
                 )
 
-                Spacer(modifier = Modifier.height(20.dp))
+                // Progress arc
+                val inset = prog / 2 + ring // spacing from outer ring
+                val diameter = size.minDimension - inset * 2f
 
-                val isLast = pageIndex == totalPages - 1
-
-                // Circular progress button
-                Box(
-                    modifier = Modifier
-                        .size(80.dp)
-                        .clip(CircleShape)
-                        .background(Color.Black)
-                        .clickable { onIndicatorClick() },
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (isLast) {
-                        Text(
-                            text = "Go",
-                            color = Color.White,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    } else {
-                        // Animated circular timer/progress
-                        Canvas(modifier = Modifier.size(60.dp)) {
-                            val strokeWidth = 12f
-                            // Background ring
-                            drawArc(
-                                color = Color.White.copy(alpha = 0.25f),
-                                startAngle = -90f,
-                                sweepAngle = 360f,
-                                useCenter = false,
-                                style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
-                            )
-                            // Foreground ring (progress)
-                            val sweep = 360f * progress.coerceIn(0f, 1f)
-                            drawArc(
-                                color = Color.White,
-                                startAngle = -90f,
-                                sweepAngle = sweep,
-                                useCenter = false,
-                                style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
-                            )
-                        }
-                    }
+                translate(left = inset, top = inset) {
+                    drawArc(
+                        color = Color.White,
+                        startAngle = -90f,
+                        sweepAngle = 360f * progress.coerceIn(0f, 1f),
+                        useCenter = false,
+                        style = Stroke(width = prog, cap = StrokeCap.Round),
+                        size = androidx.compose.ui.geometry.Size(diameter, diameter)
+                    )
                 }
             }
+
+            if (isLast) {
+                Text(
+                    text = "Go",
+                    color = Color.White,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
+    }
+}
+
+
+private class NotchedRoundedRectShape(
+    private val cornerRadius: Dp,
+    private val notchRadius: Dp,
+    private val notchCenterXFraction: Float = 0.5f
+) : Shape {
+    override fun createOutline(
+        size: androidx.compose.ui.geometry.Size,
+        layoutDirection: androidx.compose.ui.unit.LayoutDirection,
+        density: Density
+    ): Outline {
+        val cr = with(density) { cornerRadius.toPx() }
+        val nr = with(density) { notchRadius.toPx() }
+        val centerX = size.width * notchCenterXFraction
+
+        val rect = Rect(0f, 0f, size.width, size.height)
+        val round = RoundRect(rect, CornerRadius(cr, cr))
+
+        val path = Path().apply {
+            fillType = PathFillType.EvenOdd
+            addRoundRect(round)
+
+            val oval = Rect(
+                left = centerX - nr,
+                top = size.height - nr,
+                right = centerX + nr,
+                bottom = size.height + nr
+            )
+            addOval(oval)
+        }
+        return Outline.Generic(path)
     }
 }
