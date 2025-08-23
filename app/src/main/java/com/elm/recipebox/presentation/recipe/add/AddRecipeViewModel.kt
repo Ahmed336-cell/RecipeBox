@@ -38,10 +38,15 @@ class AddRecipeViewModel @Inject constructor(
     private val addRecipeUseCase: AddRecipeUseCase
 ) : ViewModel() {
 
+    private companion object {
+        const val MIN_STEP = 0
+        const val MAX_STEP = 3 // 0..3 -> 4 steps
+    }
+
     private val _recipeData = MutableStateFlow(RecipeFormData())
     val recipeData: StateFlow<RecipeFormData> = _recipeData.asStateFlow()
 
-    private val _currentStep = MutableStateFlow(0)
+    private val _currentStep = MutableStateFlow(MIN_STEP)
     val currentStep: StateFlow<Int> = _currentStep.asStateFlow()
 
     private val _uiState = MutableStateFlow(AddRecipeUiState())
@@ -98,19 +103,19 @@ class AddRecipeViewModel @Inject constructor(
     }
 
     fun nextStep() {
-        if (_currentStep.value < 3) {
+        if (_currentStep.value < MAX_STEP && canProceedToNextStep()) {
             _currentStep.value = _currentStep.value + 1
         }
     }
 
     fun previousStep() {
-        if (_currentStep.value > 0) {
+        if (_currentStep.value > MIN_STEP) {
             _currentStep.value = _currentStep.value - 1
         }
     }
 
     fun goToStep(step: Int) {
-        if (step in 0..3) {
+        if (step in MIN_STEP..MAX_STEP) {
             _currentStep.value = step
         }
     }
@@ -135,6 +140,9 @@ class AddRecipeViewModel @Inject constructor(
     }
 
     fun saveRecipe() {
+        // Guard: prevent double submits
+        if (_uiState.value.isLoading) return
+
         if (!validateRecipe()) {
             _uiState.value = _uiState.value.copy(
                 error = "Please fill in all required fields"
@@ -183,9 +191,18 @@ class AddRecipeViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(error = null)
     }
 
+    // Call this after the UI navigates using createdRecipeId to avoid repeated navigation on recomposition
+    fun consumeSuccess() {
+        _uiState.value = _uiState.value.copy(isSuccess = false, createdRecipeId = null)
+    }
+
+    fun setError(message: String) {
+        _uiState.value = _uiState.value.copy(error = message)
+    }
+
     fun resetForm() {
         _recipeData.value = RecipeFormData()
-        _currentStep.value = 0
+        _currentStep.value = MIN_STEP
         _uiState.value = AddRecipeUiState()
     }
 }

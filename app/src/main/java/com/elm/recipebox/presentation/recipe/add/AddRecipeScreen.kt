@@ -1,4 +1,5 @@
 package com.elm.recipebox.presentation.recipe.add
+
 import com.elm.recipebox.R
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -15,14 +16,15 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
@@ -42,7 +44,6 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
@@ -50,7 +51,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -65,8 +65,11 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
+
+private val BottomBarHeight = 88.dp // Height of your CustomBottomBar
 
 @Composable
 fun OrangeLabel(text: String) {
@@ -82,48 +85,29 @@ fun OrangeLabel(text: String) {
 
 @Composable
 fun BlueContainer(
-    modifier: Modifier = Modifier,
-    content: @Composable () -> Unit
+    modifier: Modifier = Modifier, content: @Composable () -> Unit
 ) {
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .background(
-                Color(0xFF4058A0),
-                shape = RoundedCornerShape(
-                    topStart = 12.dp,
-                    bottomStart = 12.dp,
-                    topEnd = 12.dp,
-                    bottomEnd = 12.dp
-                )
-            )
+            .background(Color(0xFF4058A0), shape = RoundedCornerShape(12.dp))
             .padding(16.dp)
-    ) {
-        content()
-    }
+    ) { content() }
 }
 
 @Composable
 fun BlueContainerWithTopRadius(
-    modifier: Modifier = Modifier,
-    content: @Composable () -> Unit
+    modifier: Modifier = Modifier, content: @Composable () -> Unit
 ) {
     Box(
         modifier = modifier
             .fillMaxWidth()
             .background(
                 Color(0xFF4058A0),
-                shape = RoundedCornerShape(
-                    topStart = 40.dp,
-                    bottomStart = 12.dp,
-                    topEnd = 12.dp,
-                    bottomEnd = 12.dp
-                )
+                shape = RoundedCornerShape(topStart = 40.dp, topEnd = 12.dp, bottomEnd = 12.dp, bottomStart = 12.dp)
             )
             .padding(16.dp)
-    ) {
-        content()
-    }
+    ) { content() }
 }
 
 @OptIn(ExperimentalAnimationApi::class)
@@ -137,50 +121,31 @@ fun AddNewRecipeStepper(
     val uiState by viewModel.uiState.collectAsState()
 
     LaunchedEffect(uiState.isSuccess) {
-        if (uiState.isSuccess) {
-            uiState.createdRecipeId?.let { recipeId ->
-                onRecipeCreated(recipeId)
-            }
-        }
+        if (uiState.isSuccess) uiState.createdRecipeId?.let(onRecipeCreated)
     }
 
-    Scaffold(
-        bottomBar = {
-            StepNavigationBar(
-                currentStep = currentStep,
-                canGoBack = currentStep > 0,
-                canGoNext = if (currentStep < 3) viewModel.canProceedToNextStep() else true,
-                isSaving = uiState.isLoading,
-                onBack = { viewModel.previousStep() },
-                onNext = {
-                    if (currentStep < 3) viewModel.nextStep() else viewModel.saveRecipe()
-                }
-            )
-        },
-        contentWindowInsets = WindowInsets.navigationBars
-    ) { inner ->
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.White)
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .systemBarsPadding()
-                .padding(inner)
                 .padding(horizontal = 16.dp, vertical = 12.dp)
+                .padding(bottom = 104.dp)
         ) {
             Stepper(
                 totalSteps = 4,
                 currentStep = currentStep,
-                onStepClick = { step ->
-                    if (step <= currentStep) viewModel.goToStep(step)
-                }
+                onStepClick = { step -> if (step <= currentStep) viewModel.goToStep(step) }
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
             uiState.error?.let { error ->
-                ErrorBanner(
-                    message = error,
-                    onDismiss = { viewModel.clearError() }
-                )
+                ErrorBanner(message = error, onDismiss = viewModel::clearError)
                 Spacer(modifier = Modifier.height(8.dp))
             }
 
@@ -198,14 +163,16 @@ fun AddNewRecipeStepper(
                         0 -> DetailsSection(
                             recipeData = recipeData,
                             viewModel = viewModel,
-                            onImageUriChange = { uri -> viewModel.updateImageUri(uri) }
+                            onImageUriChange = viewModel::updateImageUri
                         )
-                        1 -> IngredientsSection(recipeData.ingredients) { newIngredients ->
-                            viewModel.updateIngredients(newIngredients)
-                        }
-                        2 -> StepsSection(recipeData.steps) { newSteps ->
-                            viewModel.updateSteps(newSteps)
-                        }
+                        1 -> IngredientsSection(
+                            ingredients = recipeData.ingredients,
+                            onChange = viewModel::updateIngredients
+                        )
+                        2 -> StepsSection(
+                            steps = recipeData.steps,
+                            onChange = viewModel::updateSteps
+                        )
                         3 -> ConfirmScreen(recipeData)
                     }
                 }
@@ -226,6 +193,75 @@ fun AddNewRecipeStepper(
                 }
             }
         }
+
+        FloatingStepperButtons(
+            currentStep = currentStep,
+            canGoBack = currentStep > 0,
+            canGoNext = true,  // Changed
+            isSaving = uiState.isLoading,
+            onBack = viewModel::previousStep,
+            onNext = {
+                if (currentStep < 3) {
+                    if (viewModel.canProceedToNextStep()) {
+                        viewModel.nextStep()
+                    } else {
+                        viewModel.setError("Please fill in the required fields for this step.")
+                    }
+                } else {
+                    viewModel.saveRecipe()
+                }
+            }
+        )
+    }
+}
+
+@Composable
+private fun BoxScope.FloatingStepperButtons(
+    currentStep: Int,
+    canGoBack: Boolean,
+    canGoNext: Boolean,
+    isSaving: Boolean,
+    onBack: () -> Unit,
+    onNext: () -> Unit
+) {
+    // Floating, always on top, visibly ABOVE the custom bottom bar and keyboard
+    Row(
+        modifier = Modifier
+            .zIndex(100f)                // ensure above screen content
+            .align(Alignment.BottomCenter)
+            .navigationBarsPadding()     // respect system nav
+            .imePadding()                // respect keyboard
+            // Place the buttons above your app bottom bar: its height + extra gap
+            .padding(bottom = BottomBarHeight + 16.dp)
+            .background(
+                Color.White.copy(alpha = 0.98f),
+                shape = RoundedCornerShape(32.dp)
+            )
+            .padding(horizontal = 20.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Button(
+            onClick = onBack,
+            enabled = canGoBack && !isSaving,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color(0xFF4058A0),
+                contentColor = Color.White,
+                disabledContainerColor = Color(0xFF4058A0).copy(alpha = 0.35f),
+                disabledContentColor = Color.White.copy(alpha = 0.85f)
+            )
+        ) { Text("Back") }
+
+        Button(
+            onClick = onNext,
+            enabled = canGoNext && !isSaving,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color(0xFFFF6339),
+                contentColor = Color.White,
+                disabledContainerColor = Color(0xFFFF6339).copy(alpha = 0.35f),
+                disabledContentColor = Color.White.copy(alpha = 0.85f)
+            )
+        ) { Text(if (currentStep < 3) "Next" else "Finish") }
     }
 }
 
@@ -239,11 +275,7 @@ private fun ErrorBanner(message: String, onDismiss: () -> Unit) {
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = message,
-            color = Color(0xFF9B2C19),
-            modifier = Modifier.weight(1f)
-        )
+        Text(text = message, color = Color(0xFF9B2C19), modifier = Modifier.weight(1f))
         Text(
             text = "Dismiss",
             color = Color(0xFF9B2C19),
@@ -251,7 +283,7 @@ private fun ErrorBanner(message: String, onDismiss: () -> Unit) {
                 .clip(RoundedCornerShape(6.dp))
                 .clickable(
                     indication = null,
-                    interactionSource = remember { MutableInteractionSource() }
+                    interactionSource = androidx.compose.runtime.remember { MutableInteractionSource() }
                 ) { onDismiss() }
                 .padding(horizontal = 8.dp, vertical = 4.dp)
         )
@@ -259,47 +291,8 @@ private fun ErrorBanner(message: String, onDismiss: () -> Unit) {
 }
 
 @Composable
-private fun StepNavigationBar(
-    currentStep: Int,
-    canGoBack: Boolean,
-    canGoNext: Boolean,
-    isSaving: Boolean,
-    onBack: () -> Unit,
-    onNext: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Color.Transparent)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Button(
-            onClick = onBack,
-            enabled = canGoBack && !isSaving,
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFF4058A0),
-                contentColor = Color.White
-            )
-        ) { Text("Back") }
-
-        Button(
-            onClick = onNext,
-            enabled = canGoNext && !isSaving,
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFFFF6339),
-                contentColor = Color.White
-            )
-        ) { Text(if (currentStep < 3) "Next" else "Finish") }
-    }
-}
-
-@Composable
 fun Stepper(
-    totalSteps: Int,
-    currentStep: Int,
-    onStepClick: (Int) -> Unit
+    totalSteps: Int, currentStep: Int, onStepClick: (Int) -> Unit
 ) {
     val labels = listOf("Details", "Ingredients", "Steps", "Confirm")
 
@@ -368,18 +361,14 @@ fun Stepper(
 
 @Composable
 fun DetailsSection(
-    recipeData: RecipeFormData,
-    viewModel: AddRecipeViewModel,
-    onImageUriChange: (Uri?) -> Unit
+    recipeData: RecipeFormData, viewModel: AddRecipeViewModel, onImageUriChange: (Uri?) -> Unit
 ) {
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? -> onImageUriChange(uri) }
 
     LazyColumn(
-        modifier = Modifier
-            .fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         item {
             Card(
@@ -387,21 +376,16 @@ fun DetailsSection(
                     .fillMaxWidth()
                     .height(200.dp),
                 shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = Color(0xFFF5F5F5)
-                )
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F5F5))
             ) {
                 Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
+                    modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center
                 ) {
                     if (recipeData.imageUri != null) {
                         Image(
                             painter = rememberAsyncImagePainter(
-                                ImageRequest.Builder(LocalContext.current)
-                                    .data(recipeData.imageUri)
-                                    .crossfade(true)
-                                    .build()
+                                ImageRequest.Builder(LocalContext.current).data(recipeData.imageUri)
+                                    .crossfade(true).build()
                             ),
                             contentDescription = "Recipe Image",
                             modifier = Modifier.fillMaxSize(),
@@ -419,11 +403,7 @@ fun DetailsSection(
                                 alpha = 0.3f
                             )
                             Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                "No Image Selected",
-                                color = Color.Gray,
-                                fontSize = 14.sp
-                            )
+                            Text("No Image Selected", color = Color.Gray, fontSize = 14.sp)
                         }
                     }
 
@@ -477,7 +457,7 @@ fun DetailsSection(
                 labelOrange = "Cook Time",
                 hours = recipeData.cookTimeHours,
                 minutes = recipeData.cookTimeMinutes,
-                onTimeChange = { hours, minutes -> viewModel.updateCookTime(hours, minutes) }
+                onTimeChange = viewModel::updateCookTime
             )
         }
 
@@ -517,10 +497,7 @@ fun DetailsSection(
 
 @Composable
 fun CustomTextField(
-    label: String,
-    labelOrange: String,
-    value: String,
-    onValueChange: (String) -> Unit
+    label: String, labelOrange: String, value: String, onValueChange: (String) -> Unit
 ) {
     Column {
         OrangeLabel(labelOrange)
@@ -552,28 +529,20 @@ fun CustomTextField(
 
 @Composable
 fun ServingsSection(
-    labelOrange: String,
-    servings: Int,
-    onServingsChange: (Int) -> Unit
+    labelOrange: String, servings: Int, onServingsChange: (Int) -> Unit
 ) {
     Column {
         OrangeLabel(labelOrange)
         Spacer(modifier = Modifier.height(6.dp))
         BlueContainer {
             Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth()
+                verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
                     "Serving For",
-                    style = TextStyle(
-                        color = Color.White,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold
-                    ),
+                    style = TextStyle(color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold),
                     modifier = Modifier.padding(end = 8.dp)
                 )
-
                 Icon(
                     painter = painterResource(R.drawable.minus),
                     contentDescription = "Decrement",
@@ -581,21 +550,13 @@ fun ServingsSection(
                     modifier = Modifier
                         .size(30.dp)
                         .padding(end = 8.dp)
-                        .clickable {
-                            if (servings > 1) onServingsChange(servings - 1)
-                        }
+                        .clickable { if (servings > 1) onServingsChange(servings - 1) }
                 )
-
                 Text(
                     text = servings.toString(),
-                    style = TextStyle(
-                        color = Color.White,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold
-                    ),
+                    style = TextStyle(color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold),
                     modifier = Modifier.padding(horizontal = 16.dp)
                 )
-
                 Icon(
                     painter = painterResource(R.drawable.add),
                     contentDescription = "Increment",
@@ -603,18 +564,11 @@ fun ServingsSection(
                     modifier = Modifier
                         .size(30.dp)
                         .padding(start = 8.dp)
-                        .clickable {
-                            onServingsChange(servings + 1)
-                        }
+                        .clickable { onServingsChange(servings + 1) }
                 )
-
                 Text(
                     text = "people",
-                    style = TextStyle(
-                        color = Color.White,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold
-                    ),
+                    style = TextStyle(color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold),
                     modifier = Modifier.padding(start = 8.dp)
                 )
             }
@@ -624,10 +578,7 @@ fun ServingsSection(
 
 @Composable
 fun CookTimeSection(
-    labelOrange: String,
-    hours: String,
-    minutes: String,
-    onTimeChange: (String, String) -> Unit
+    labelOrange: String, hours: String, minutes: String, onTimeChange: (String, String) -> Unit
 ) {
     Column {
         OrangeLabel(labelOrange)
@@ -649,15 +600,7 @@ fun CookTimeSection(
                     shape = RoundedCornerShape(20.dp),
                     singleLine = true,
                     suffix = {
-                        Text(
-                            text = "h",
-                            style = TextStyle(
-                                color = Color.White,
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold
-                            ),
-                            modifier = Modifier.padding(start = 8.dp)
-                        )
+                        Text("h", style = TextStyle(color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold))
                     },
                     colors = TextFieldDefaults.colors(
                         focusedContainerColor = Color(0xFF4058A0),
@@ -676,20 +619,11 @@ fun CookTimeSection(
                     onValueChange = { onTimeChange(hours, it.filter(Char::isDigit).take(2)) },
                     placeholder = { Text("Minutes", color = Color.LightGray) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(20.dp)),
+                    modifier = Modifier.clip(RoundedCornerShape(20.dp)),
                     shape = RoundedCornerShape(20.dp),
                     singleLine = true,
                     suffix = {
-                        Text(
-                            text = "m",
-                            style = TextStyle(
-                                color = Color.White,
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold
-                            ),
-                            modifier = Modifier.padding(start = 8.dp)
-                        )
+                        Text("m", style = TextStyle(color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold))
                     },
                     colors = TextFieldDefaults.colors(
                         focusedContainerColor = Color(0xFF4058A0),
@@ -709,15 +643,13 @@ fun CookTimeSection(
 
 @Composable
 fun DifficultyCard(
-    selectedDifficulty: String?,
-    onDifficultyChange: (String?) -> Unit
+    selectedDifficulty: String?, onDifficultyChange: (String?) -> Unit
 ) {
     Column {
         OrangeLabel("Difficulty")
         Spacer(modifier = Modifier.height(6.dp))
         BlueContainerWithTopRadius {
             val difficulties = listOf("Easy", "Medium", "Professional")
-
             Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -731,11 +663,7 @@ fun DifficultyCard(
                                 if (isSelected) Color(0xFFDEE21B) else Color(0xFF4058A0),
                                 shape = RoundedCornerShape(8.dp)
                             )
-                            .border(
-                                color = Color.White,
-                                width = 1.dp,
-                                shape = RoundedCornerShape(8.dp)
-                            )
+                            .border(1.dp, Color.White, RoundedCornerShape(8.dp))
                             .clickable { onDifficultyChange(diff) }
                             .padding(horizontal = 12.dp, vertical = 8.dp)
                     ) {
@@ -753,20 +681,14 @@ fun DifficultyCard(
 
 @Composable
 fun DishTypeCard(
-    selectedDishTypes: Set<String>,
-    onDishTypesChange: (Set<String>) -> Unit
+    selectedDishTypes: Set<String>, onDishTypesChange: (Set<String>) -> Unit
 ) {
     Column {
         OrangeLabel("Dish Type")
         Spacer(modifier = Modifier.height(6.dp))
         BlueContainerWithTopRadius {
-            val dishTypes = listOf(
-                "BreakFast", "Launch", "Snack", "Brunch", "Dessert", "Dinner", "Appetizer"
-            )
-
-            Column(
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
+            val dishTypes = listOf("BreakFast", "Launch", "Snack", "Brunch", "Dessert", "Dinner", "Appetizer")
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 dishTypes.chunked(3).forEach { rowItems ->
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -781,18 +703,10 @@ fun DishTypeCard(
                                         if (isSelected) Color(0xFFDEE21B) else Color(0xFF4058A0),
                                         shape = RoundedCornerShape(8.dp)
                                     )
-                                    .border(
-                                        color = Color.White,
-                                        width = 1.dp,
-                                        shape = RoundedCornerShape(8.dp)
-                                    )
+                                    .border(1.dp, Color.White, RoundedCornerShape(8.dp))
                                     .clickable {
                                         val newSelection = selectedDishTypes.toMutableSet()
-                                        if (isSelected) {
-                                            newSelection.remove(type)
-                                        } else {
-                                            newSelection.add(type)
-                                        }
+                                        if (isSelected) newSelection.remove(type) else newSelection.add(type)
                                         onDishTypesChange(newSelection)
                                     }
                                     .padding(8.dp)
@@ -805,9 +719,7 @@ fun DishTypeCard(
                                 )
                             }
                         }
-                        repeat(3 - rowItems.size) {
-                            Spacer(modifier = Modifier.weight(1f))
-                        }
+                        repeat(3 - rowItems.size) { Spacer(modifier = Modifier.weight(1f)) }
                     }
                 }
             }
@@ -817,20 +729,14 @@ fun DishTypeCard(
 
 @Composable
 fun DietTypeCard(
-    selectedDietTypes: Set<String>,
-    onDietTypesChange: (Set<String>) -> Unit
+    selectedDietTypes: Set<String>, onDietTypesChange: (Set<String>) -> Unit
 ) {
     Column {
         OrangeLabel("Diet Type")
         Spacer(modifier = Modifier.height(6.dp))
         BlueContainerWithTopRadius {
-            val dietTypes = listOf(
-                "Vegetarian", "High Fat", "Low Fat", "Sugar Free", "Lactose Free", "Gluten Free"
-            )
-
-            Column(
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
+            val dietTypes = listOf("Vegetarian", "High Fat", "Low Fat", "Sugar Free", "Lactose Free", "Gluten Free")
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 dietTypes.chunked(3).forEach { rowItems ->
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -845,18 +751,10 @@ fun DietTypeCard(
                                         if (isSelected) Color(0xFFDEE21B) else Color(0xFF4058A0),
                                         shape = RoundedCornerShape(8.dp)
                                     )
-                                    .border(
-                                        color = Color.White,
-                                        width = 1.dp,
-                                        shape = RoundedCornerShape(8.dp)
-                                    )
+                                    .border(1.dp, Color.White, RoundedCornerShape(8.dp))
                                     .clickable {
                                         val newSelection = selectedDietTypes.toMutableSet()
-                                        if (isSelected) {
-                                            newSelection.remove(type)
-                                        } else {
-                                            newSelection.add(type)
-                                        }
+                                        if (isSelected) newSelection.remove(type) else newSelection.add(type)
                                         onDietTypesChange(newSelection)
                                     }
                                     .padding(8.dp)
@@ -869,9 +767,7 @@ fun DietTypeCard(
                                 )
                             }
                         }
-                        repeat(3 - rowItems.size) {
-                            Spacer(modifier = Modifier.weight(1f))
-                        }
+                        repeat(3 - rowItems.size) { Spacer(modifier = Modifier.weight(1f)) }
                     }
                 }
             }

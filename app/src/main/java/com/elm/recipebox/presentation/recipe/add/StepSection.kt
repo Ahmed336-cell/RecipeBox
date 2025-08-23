@@ -3,9 +3,9 @@ package com.elm.recipebox.presentation.recipe.add
 import androidx.compose.foundation.background
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
@@ -20,82 +20,71 @@ import androidx.compose.ui.unit.sp
 
 @Composable
 fun StepsSection(steps: List<String>, onChange: (List<String>) -> Unit) {
-    Column(
+    val displaySteps = if (steps.isEmpty()) listOf("") else steps
+
+    LazyColumn(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp)
-            .verticalScroll(rememberScrollState())
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Color(0xFFFF6339), RoundedCornerShape(12.dp))
-                .padding(16.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                "Recipe Steps",
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.White
-            )
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        val displaySteps = if (steps.isEmpty()) listOf("") else steps
-
-        Column(
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            displaySteps.forEachIndexed { index, step ->
-                StepCard(
-                    step = step,
-                    stepNumber = index + 1,
-                    showDelete = displaySteps.size > 1,
-                    onValueChange = { newValue ->
-                        val newList = displaySteps.toMutableList()
-                        newList[index] = newValue
-                        onChange(newList)
-                    },
-                    onDelete = {
-                        val newList = displaySteps.toMutableList()
-                        newList.removeAt(index)
-                        onChange(newList)
-                    }
+        item {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color(0xFFFF6339), RoundedCornerShape(12.dp))
+                    .padding(16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    "Recipe Steps",
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
                 )
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        OutlinedButton(
-            onClick = {
-                val newList = displaySteps.toMutableList()
-                newList.add("")
-                onChange(newList)
-            },
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.outlinedButtonColors(
-                contentColor = Color(0xFFFF6339)
-            ),
-            border = BorderStroke(
-                width = 1.dp,
-                color = Color(0xFFFF6339)
-            )
-        ) {
-            Icon(
-                Icons.Default.Add,
-                contentDescription = "Add Step",
-                modifier = Modifier.size(20.dp)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                "Add Step",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Medium
+        itemsIndexed(displaySteps, key = { index, _ -> index }) { index, step ->
+            StepCard(
+                step = step,
+                stepNumber = index + 1,
+                showDelete = displaySteps.size > 1,
+                onValueChange = { newValue ->
+                    val newList = displaySteps.toMutableList()
+                    newList[index] = newValue
+                    onChange(newList)
+                },
+                onDelete = {
+                    val newList = displaySteps.toMutableList()
+                    newList.removeAt(index)
+                    onChange(newList)
+                }
             )
         }
+
+        item {
+            OutlinedButton(
+                onClick = {
+                    val newList = displaySteps.toMutableList()
+                    newList.add("")
+                    onChange(newList)
+                },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFFF6339)),
+                border = BorderStroke(1.dp, Color(0xFFFF6339))
+            ) {
+                Icon(
+                    Icons.Default.Add,
+                    contentDescription = "Add Step",
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Add Step", fontSize = 16.sp, fontWeight = FontWeight.Medium)
+            }
+        }
+
+        item { Spacer(modifier = Modifier.height(8.dp)) }
     }
 }
 
@@ -110,22 +99,16 @@ private fun StepCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = Color.White
-        ),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
+        Column(modifier = Modifier.padding(16.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
                         modifier = Modifier
                             .size(24.dp)
@@ -141,18 +124,14 @@ private fun StepCard(
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Step $stepNumber",
+                        "Step $stepNumber",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Medium,
                         color = Color(0xFF4058A0)
                     )
                 }
-
                 if (showDelete) {
-                    IconButton(
-                        onClick = onDelete,
-                        modifier = Modifier.size(24.dp)
-                    ) {
+                    IconButton(onClick = onDelete, modifier = Modifier.size(24.dp)) {
                         Icon(
                             Icons.Default.Delete,
                             contentDescription = "Delete Step",
