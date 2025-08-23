@@ -30,32 +30,32 @@ fun ConfirmScreen(recipeData: RecipeFormData) {
             contentAlignment = Alignment.Center
         ) {
             Text(
-                "Confirm Recipe Details", 
-                fontSize = 24.sp, 
+                "Confirm Recipe Details",
+                fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.White
             )
         }
-        
+
         Spacer(modifier = Modifier.height(16.dp))
-        
+
         ConfirmSection(
             title = "Recipe Name",
             content = recipeData.title.ifEmpty { "Not specified" }
         )
-        
+
         if (recipeData.description.isNotEmpty()) {
             ConfirmSection(
                 title = "Description",
                 content = recipeData.description
             )
         }
-        
+
         ConfirmSection(
             title = "Servings",
             content = "${recipeData.servings} people"
         )
-        
+
         val cookTime = if (recipeData.cookTimeHours != "00" || recipeData.cookTimeMinutes != "00") {
             "${recipeData.cookTimeHours}h ${recipeData.cookTimeMinutes}m"
         } else {
@@ -65,28 +65,28 @@ fun ConfirmScreen(recipeData: RecipeFormData) {
             title = "Cook Time",
             content = cookTime
         )
-        
+
         if (recipeData.difficulty != null) {
             ConfirmSection(
                 title = "Difficulty",
                 content = recipeData.difficulty
             )
         }
-        
+
         if (recipeData.dishTypes.isNotEmpty()) {
             ConfirmSection(
                 title = "Dish Types",
                 content = recipeData.dishTypes.joinToString(", ")
             )
         }
-        
+
         if (recipeData.dietTypes.isNotEmpty()) {
             ConfirmSection(
                 title = "Diet Types",
                 content = recipeData.dietTypes.joinToString(", ")
             )
         }
-        
+
         ConfirmSection(
             title = "Ingredients",
             content = if (recipeData.ingredients.isNotEmpty() && recipeData.ingredients.any { it.isNotEmpty() }) {
@@ -95,7 +95,7 @@ fun ConfirmScreen(recipeData: RecipeFormData) {
                 "No ingredients specified"
             }
         )
-        
+
         ConfirmSection(
             title = "Steps",
             content = if (recipeData.steps.isNotEmpty() && recipeData.steps.any { it.isNotEmpty() }) {
@@ -126,7 +126,7 @@ private fun ConfirmSection(
             color = Color(0xFFFF6339),
             modifier = Modifier.padding(bottom = 4.dp)
         )
-        
+
         Box(
             modifier = Modifier
                 .fillMaxWidth()

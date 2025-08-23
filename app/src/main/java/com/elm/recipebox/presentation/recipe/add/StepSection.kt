@@ -34,17 +34,17 @@ fun StepsSection(steps: List<String>, onChange: (List<String>) -> Unit) {
             contentAlignment = Alignment.Center
         ) {
             Text(
-                "Recipe Steps", 
-                fontSize = 24.sp, 
+                "Recipe Steps",
+                fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.White
             )
         }
-        
+
         Spacer(modifier = Modifier.height(16.dp))
-        
+
         val displaySteps = if (steps.isEmpty()) listOf("") else steps
-        
+
         Column(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
@@ -66,11 +66,11 @@ fun StepsSection(steps: List<String>, onChange: (List<String>) -> Unit) {
                 )
             }
         }
-        
+
         Spacer(modifier = Modifier.height(16.dp))
-        
+
         OutlinedButton(
-            onClick = { 
+            onClick = {
                 val newList = displaySteps.toMutableList()
                 newList.add("")
                 onChange(newList)
@@ -147,7 +147,7 @@ private fun StepCard(
                         color = Color(0xFF4058A0)
                     )
                 }
-                
+
                 if (showDelete) {
                     IconButton(
                         onClick = onDelete,
@@ -162,10 +162,10 @@ private fun StepCard(
                     }
                 }
             }
-            
+
             Spacer(modifier = Modifier.height(8.dp))
-            
-            OutlinedTextField(
+
+            TextField(
                 value = step,
                 onValueChange = onValueChange,
                 placeholder = {
@@ -177,12 +177,18 @@ private fun StepCard(
                 },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(8.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Color(0xFF4058A0),
-                    unfocusedBorderColor = Color.LightGray
-                ),
                 minLines = 2,
-                maxLines = 4
+                maxLines = 4,
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = Color.White,
+                    unfocusedContainerColor = Color.White,
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent,
+                    disabledIndicatorColor = Color.Transparent,
+                    focusedTextColor = Color.Black,
+                    unfocusedTextColor = Color.Black,
+                    cursorColor = Color(0xFFFF6339)
+                )
             )
         }
     }

@@ -3,30 +3,54 @@ import com.elm.recipebox.R
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
-
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,7 +61,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -64,13 +88,12 @@ fun BlueContainer(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .padding(bottom = 16.dp)
             .background(
-                Color(0xFF4058A0), 
+                Color(0xFF4058A0),
                 shape = RoundedCornerShape(
-                    topStart = 12.dp, 
-                    bottomStart = 12.dp, 
-                    topEnd = 12.dp, 
+                    topStart = 12.dp,
+                    bottomStart = 12.dp,
+                    topEnd = 12.dp,
                     bottomEnd = 12.dp
                 )
             )
@@ -88,13 +111,12 @@ fun BlueContainerWithTopRadius(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .padding(bottom = 16.dp)
             .background(
                 Color(0xFF4058A0),
                 shape = RoundedCornerShape(
-                    topStart = 40.dp, 
+                    topStart = 40.dp,
                     bottomStart = 12.dp,
-                    topEnd = 12.dp, 
+                    topEnd = 12.dp,
                     bottomEnd = 12.dp
                 )
             )
@@ -104,7 +126,7 @@ fun BlueContainerWithTopRadius(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalAnimationApi::class)
 @Composable
 fun AddNewRecipeStepper(
     viewModel: AddRecipeViewModel = hiltViewModel(),
@@ -113,7 +135,7 @@ fun AddNewRecipeStepper(
     val recipeData by viewModel.recipeData.collectAsState()
     val currentStep by viewModel.currentStep.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
-    
+
     LaunchedEffect(uiState.isSuccess) {
         if (uiState.isSuccess) {
             uiState.createdRecipeId?.let { recipeId ->
@@ -121,66 +143,85 @@ fun AddNewRecipeStepper(
             }
         }
     }
-    
-    uiState.error?.let { error ->
-        LaunchedEffect(error) {
-            viewModel.clearError()
-        }
-    }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-            .systemBarsPadding()
-    ) {
-        Stepper(
-            totalSteps = 4,
-            currentStep = currentStep
-        )
-
-        Spacer(modifier = Modifier.height(24.dp))
-        
-        Box(
+    Scaffold(
+        bottomBar = {
+            StepNavigationBar(
+                currentStep = currentStep,
+                canGoBack = currentStep > 0,
+                canGoNext = if (currentStep < 3) viewModel.canProceedToNextStep() else true,
+                isSaving = uiState.isLoading,
+                onBack = { viewModel.previousStep() },
+                onNext = {
+                    if (currentStep < 3) viewModel.nextStep() else viewModel.saveRecipe()
+                }
+            )
+        },
+        contentWindowInsets = WindowInsets.navigationBars
+    ) { inner ->
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-                .padding(bottom = 80.dp)
+                .fillMaxSize()
+                .systemBarsPadding()
+                .padding(inner)
+                .padding(horizontal = 16.dp, vertical = 12.dp)
         ) {
-                        when (currentStep) {
-                0 -> DetailsSection(
-                    recipeData = recipeData,
-                    viewModel = viewModel,
-                    onImageUriChange = { uri -> viewModel.updateImageUri(uri) }
+            Stepper(
+                totalSteps = 4,
+                currentStep = currentStep,
+                onStepClick = { step ->
+                    if (step <= currentStep) viewModel.goToStep(step)
+                }
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            uiState.error?.let { error ->
+                ErrorBanner(
+                    message = error,
+                    onDismiss = { viewModel.clearError() }
                 )
-                1 -> IngredientsSection(recipeData.ingredients) { newIngredients ->
-                    viewModel.updateIngredients(newIngredients)
-                }
-                2 -> StepsSection(recipeData.steps) { newSteps ->
-                    viewModel.updateSteps(newSteps)
-                }
-                3 -> ConfirmScreen(recipeData)
+                Spacer(modifier = Modifier.height(8.dp))
             }
-            
-            Row(
-                horizontalArrangement = Arrangement.SpaceBetween,
+
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .align(Alignment.BottomCenter)
-                    .padding(top = 30.dp)
+                    .weight(1f)
             ) {
-                if (currentStep > 0) {
-                    Button(onClick = { viewModel.previousStep() }) {
-                        Text("Back")
+                AnimatedContent(
+                    targetState = currentStep,
+                    transitionSpec = { fadeIn() togetherWith fadeOut() },
+                    label = "step-content"
+                ) { step ->
+                    when (step) {
+                        0 -> DetailsSection(
+                            recipeData = recipeData,
+                            viewModel = viewModel,
+                            onImageUriChange = { uri -> viewModel.updateImageUri(uri) }
+                        )
+                        1 -> IngredientsSection(recipeData.ingredients) { newIngredients ->
+                            viewModel.updateIngredients(newIngredients)
+                        }
+                        2 -> StepsSection(recipeData.steps) { newSteps ->
+                            viewModel.updateSteps(newSteps)
+                        }
+                        3 -> ConfirmScreen(recipeData)
                     }
                 }
-                if (currentStep < 3) {
-                    Button(onClick = { viewModel.nextStep() }) {
-                        Text("Next")
-                    }
-                } else {
-                    Button(onClick = { viewModel.saveRecipe() }) {
-                        Text("Finish")
+
+                if (uiState.isLoading) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.Black.copy(alpha = 0.25f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            CircularProgressIndicator(color = Color.White)
+                            Spacer(Modifier.height(12.dp))
+                            Text("Saving...", color = Color.White, fontWeight = FontWeight.SemiBold)
+                        }
                     }
                 }
             }
@@ -189,44 +230,136 @@ fun AddNewRecipeStepper(
 }
 
 @Composable
-fun Stepper(totalSteps: Int, currentStep: Int) {
-    val steps = listOf("Recipe Details", "Ingredients", "Steps", "Confirm")
-
+private fun ErrorBanner(message: String, onDismiss: () -> Unit) {
     Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color(0xFFFFEAE6), RoundedCornerShape(8.dp))
+            .border(1.dp, Color(0xFFFF6339), RoundedCornerShape(8.dp))
+            .padding(12.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        for (i in 0 until totalSteps) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Box(
-                    modifier = Modifier
-                        .size(60.dp)
-                        .clip(CircleShape)
-                        .background(
-                            if (i <= currentStep) MaterialTheme.colorScheme.primary
-                            else Color.Gray
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = if (i == currentStep) steps[i] else (i + 1).toString(),
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Center,
-                        style = TextStyle(fontSize = 12.sp),
-                        modifier = Modifier.padding(4.dp)
-                    )
-                }
+        Text(
+            text = message,
+            color = Color(0xFF9B2C19),
+            modifier = Modifier.weight(1f)
+        )
+        Text(
+            text = "Dismiss",
+            color = Color(0xFF9B2C19),
+            modifier = Modifier
+                .clip(RoundedCornerShape(6.dp))
+                .clickable(
+                    indication = null,
+                    interactionSource = remember { MutableInteractionSource() }
+                ) { onDismiss() }
+                .padding(horizontal = 8.dp, vertical = 4.dp)
+        )
+    }
+}
 
-                if (i < totalSteps - 1) {
-                    HorizontalDivider(
-                        color = if (i < currentStep) MaterialTheme.colorScheme.primary else Color.Gray,
-                        thickness = 2.dp,
-                        modifier = Modifier
-                            .height(2.dp)
-                            .width(50.dp)
-                    )
+@Composable
+private fun StepNavigationBar(
+    currentStep: Int,
+    canGoBack: Boolean,
+    canGoNext: Boolean,
+    isSaving: Boolean,
+    onBack: () -> Unit,
+    onNext: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color.Transparent)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Button(
+            onClick = onBack,
+            enabled = canGoBack && !isSaving,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color(0xFF4058A0),
+                contentColor = Color.White
+            )
+        ) { Text("Back") }
+
+        Button(
+            onClick = onNext,
+            enabled = canGoNext && !isSaving,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color(0xFFFF6339),
+                contentColor = Color.White
+            )
+        ) { Text(if (currentStep < 3) "Next" else "Finish") }
+    }
+}
+
+@Composable
+fun Stepper(
+    totalSteps: Int,
+    currentStep: Int,
+    onStepClick: (Int) -> Unit
+) {
+    val labels = listOf("Details", "Ingredients", "Steps", "Confirm")
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Box(modifier = Modifier.fillMaxWidth()) {
+            HorizontalDivider(
+                color = Color.LightGray,
+                thickness = 2.dp,
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .fillMaxWidth()
+                    .padding(horizontal = 28.dp)
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                (0 until totalSteps).forEach { i ->
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        val isCompleted = i < currentStep
+                        val isActive = i == currentStep
+                        Box(
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    when {
+                                        isActive -> MaterialTheme.colorScheme.primary
+                                        isCompleted -> Color(0xFF4CAF50)
+                                        else -> Color.Gray
+                                    }
+                                )
+                                .border(1.dp, Color.White.copy(alpha = 0.6f), CircleShape)
+                                .clickable { onStepClick(i) },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (isCompleted) {
+                                Icon(
+                                    Icons.Default.Check,
+                                    contentDescription = "Completed",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            } else {
+                                Text(
+                                    text = "${i + 1}",
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 12.sp
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = labels[i],
+                            color = if (isActive) MaterialTheme.colorScheme.primary else Color.Gray,
+                            fontSize = 12.sp
+                        )
+                    }
                 }
             }
         }
@@ -242,139 +375,143 @@ fun DetailsSection(
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? -> onImageUriChange(uri) }
-    
-    Column(
+
+    LazyColumn(
         modifier = Modifier
-            .fillMaxWidth()
-            .verticalScroll(rememberScrollState())
+            .fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(200.dp),
-            shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = Color(0xFFF5F5F5)
-            )
-        ) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
+        item {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color(0xFFF5F5F5)
+                )
             ) {
-                if (recipeData.imageUri != null) {
-                    Image(
-                        painter = rememberAsyncImagePainter(
-                            ImageRequest.Builder(LocalContext.current)
-                                .data(recipeData.imageUri)
-                                .build()
-                        ),
-                        contentDescription = "Recipe Image",
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
-                    )
-                } else {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (recipeData.imageUri != null) {
                         Image(
-                            painter = painterResource(R.drawable.dish1),
-                            contentDescription = "Placeholder",
-                            modifier = Modifier.size(80.dp),
-                            alpha = 0.3f
+                            painter = rememberAsyncImagePainter(
+                                ImageRequest.Builder(LocalContext.current)
+                                    .data(recipeData.imageUri)
+                                    .crossfade(true)
+                                    .build()
+                            ),
+                            contentDescription = "Recipe Image",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            "No Image Selected",
-                            color = Color.Gray,
-                            fontSize = 14.sp
+                    } else {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Image(
+                                painter = painterResource(R.drawable.dish1),
+                                contentDescription = "Placeholder",
+                                modifier = Modifier.size(80.dp),
+                                alpha = 0.3f
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                "No Image Selected",
+                                color = Color.Gray,
+                                fontSize = 14.sp
+                            )
+                        }
+                    }
+
+                    FloatingActionButton(
+                        onClick = { galleryLauncher.launch("image/*") },
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(16.dp)
+                            .size(48.dp),
+                        containerColor = Color(0xFFFF6339),
+                        contentColor = Color.White
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.add),
+                            contentDescription = "Add Image",
+                            modifier = Modifier.size(24.dp)
                         )
                     }
-                }
-                
-                FloatingActionButton(
-                    onClick = { galleryLauncher.launch("image/*") },
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(16.dp)
-                        .size(48.dp),
-                    containerColor = Color(0xFFFF6339),
-                    contentColor = Color.White
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.add),
-                        contentDescription = "Add Image",
-                        modifier = Modifier.size(24.dp)
-                    )
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        item {
+            CustomTextField(
+                label = "Recipe Name",
+                labelOrange = "Name",
+                value = recipeData.title,
+                onValueChange = viewModel::updateTitle
+            )
+        }
 
-        CustomTextField(
-            label = "Recipe Name",
-            labelOrange = "Name",
-            value = recipeData.title,
-            onValueChange = viewModel::updateTitle
-        )
-        
-        Spacer(modifier = Modifier.height(8.dp))
-        
-        CustomTextField(
-            label = "Recipe Description",
-            labelOrange = "Description",
-            value = recipeData.description,
-            onValueChange = viewModel::updateDescription
-        )
-        
-        Spacer(modifier = Modifier.height(8.dp))
-        
-        ServingsSection(
-            labelOrange = "Number",
-            servings = recipeData.servings,
-            onServingsChange = viewModel::updateServings
-        )
-        
-        Spacer(modifier = Modifier.height(8.dp))
-        
-        CookTimeSection(
-            labelOrange = "Cook Time",
-            hours = recipeData.cookTimeHours,
-            minutes = recipeData.cookTimeMinutes,
-            onTimeChange = { hours, minutes -> viewModel.updateCookTime(hours, minutes) }
-        )
-        
-        Spacer(modifier = Modifier.height(8.dp))
-        
-        DifficultyCard(
-            selectedDifficulty = recipeData.difficulty,
-            onDifficultyChange = viewModel::updateDifficulty
-        )
-        
-        Spacer(modifier = Modifier.height(8.dp))
-        
-        DishTypeCard(
-            selectedDishTypes = recipeData.dishTypes,
-            onDishTypesChange = viewModel::updateDishTypes
-        )
-        
-        Spacer(modifier = Modifier.height(8.dp))
-        
-        // Diet Type
-        DietTypeCard(
-            selectedDietTypes = recipeData.dietTypes,
-            onDietTypesChange = viewModel::updateDietTypes
-        )
-        
-        Spacer(modifier = Modifier.height(8.dp))
-        
-        CustomTextField(
-            label = "#eat#food",
-            labelOrange = "HashTags",
-            value = recipeData.hashtags,
-            onValueChange = viewModel::updateHashtags
-        )
+        item {
+            CustomTextField(
+                label = "Recipe Description",
+                labelOrange = "Description",
+                value = recipeData.description,
+                onValueChange = viewModel::updateDescription
+            )
+        }
+
+        item {
+            ServingsSection(
+                labelOrange = "Number",
+                servings = recipeData.servings,
+                onServingsChange = viewModel::updateServings
+            )
+        }
+
+        item {
+            CookTimeSection(
+                labelOrange = "Cook Time",
+                hours = recipeData.cookTimeHours,
+                minutes = recipeData.cookTimeMinutes,
+                onTimeChange = { hours, minutes -> viewModel.updateCookTime(hours, minutes) }
+            )
+        }
+
+        item {
+            DifficultyCard(
+                selectedDifficulty = recipeData.difficulty,
+                onDifficultyChange = viewModel::updateDifficulty
+            )
+        }
+
+        item {
+            DishTypeCard(
+                selectedDishTypes = recipeData.dishTypes,
+                onDishTypesChange = viewModel::updateDishTypes
+            )
+        }
+
+        item {
+            DietTypeCard(
+                selectedDietTypes = recipeData.dietTypes,
+                onDietTypesChange = viewModel::updateDietTypes
+            )
+        }
+
+        item {
+            CustomTextField(
+                label = "#eat #food",
+                labelOrange = "HashTags",
+                value = recipeData.hashtags,
+                onValueChange = viewModel::updateHashtags
+            )
+        }
+
+        item { Spacer(modifier = Modifier.height(8.dp)) }
     }
 }
 
@@ -385,21 +522,31 @@ fun CustomTextField(
     value: String,
     onValueChange: (String) -> Unit
 ) {
-    OrangeLabel(labelOrange)
-    BlueContainer {
-        OutlinedTextField(
-            value = value,
-            onValueChange = onValueChange,
-            label = { Text(label, style = TextStyle(color = Color.Gray)) },
-            modifier = Modifier
-                .fillMaxWidth()
-                .border(
-                    width = 1.dp,
-                    color = Color.White,
-                    shape = RoundedCornerShape(20.dp)
+    Column {
+        OrangeLabel(labelOrange)
+        Spacer(modifier = Modifier.height(6.dp))
+        BlueContainer {
+            TextField(
+                value = value,
+                onValueChange = onValueChange,
+                placeholder = { Text(label, style = TextStyle(color = Color.Gray)) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(20.dp)),
+                shape = RoundedCornerShape(20.dp),
+                singleLine = true,
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = Color.White,
+                    unfocusedContainerColor = Color.White,
+                    cursorColor = Color(0xFFFF6339),
+                    focusedTextColor = Color.Black,
+                    unfocusedTextColor = Color.Black,
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent,
+                    disabledIndicatorColor = Color.Transparent
                 )
-                .background(Color.White)
-        )
+            )
+        }
     }
 }
 
@@ -409,65 +556,68 @@ fun ServingsSection(
     servings: Int,
     onServingsChange: (Int) -> Unit
 ) {
-    OrangeLabel(labelOrange)
-    BlueContainer {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text(
-                "Serving For",
-                style = TextStyle(
-                    color = Color.White, 
-                    fontSize = 16.sp, 
-                    fontWeight = FontWeight.Bold
-                ),
-                modifier = Modifier.padding(end = 8.dp)
-            )
-            
-            Icon(
-                painter = painterResource(R.drawable.minus),
-                contentDescription = "Decrement",
-                tint = Color.White,
-                modifier = Modifier
-                    .size(30.dp)
-                    .padding(end = 8.dp)
-                    .clickable { 
-                        if (servings > 1) onServingsChange(servings - 1)
-                    }
-            )
-            
-            Text(
-                text = servings.toString(),
-                style = TextStyle(
-                    color = Color.White, 
-                    fontSize = 16.sp, 
-                    fontWeight = FontWeight.Bold
-                ),
-                modifier = Modifier.padding(horizontal = 16.dp)
-            )
-            
-            Icon(
-                painter = painterResource(R.drawable.add),
-                contentDescription = "Increment",
-                tint = Color.White,
-                modifier = Modifier
-                    .size(30.dp)
-                    .padding(start = 8.dp)
-                    .clickable { 
-                        onServingsChange(servings + 1)
-                    }
-            )
-            
-            Text(
-                text = "people",
-                style = TextStyle(
-                    color = Color.White, 
-                    fontSize = 16.sp, 
-                    fontWeight = FontWeight.Bold
-                ),
-                modifier = Modifier.padding(start = 8.dp)
-            )
+    Column {
+        OrangeLabel(labelOrange)
+        Spacer(modifier = Modifier.height(6.dp))
+        BlueContainer {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    "Serving For",
+                    style = TextStyle(
+                        color = Color.White,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold
+                    ),
+                    modifier = Modifier.padding(end = 8.dp)
+                )
+
+                Icon(
+                    painter = painterResource(R.drawable.minus),
+                    contentDescription = "Decrement",
+                    tint = Color.White,
+                    modifier = Modifier
+                        .size(30.dp)
+                        .padding(end = 8.dp)
+                        .clickable {
+                            if (servings > 1) onServingsChange(servings - 1)
+                        }
+                )
+
+                Text(
+                    text = servings.toString(),
+                    style = TextStyle(
+                        color = Color.White,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold
+                    ),
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
+
+                Icon(
+                    painter = painterResource(R.drawable.add),
+                    contentDescription = "Increment",
+                    tint = Color.White,
+                    modifier = Modifier
+                        .size(30.dp)
+                        .padding(start = 8.dp)
+                        .clickable {
+                            onServingsChange(servings + 1)
+                        }
+                )
+
+                Text(
+                    text = "people",
+                    style = TextStyle(
+                        color = Color.White,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold
+                    ),
+                    modifier = Modifier.padding(start = 8.dp)
+                )
+            }
         }
     }
 }
@@ -479,61 +629,80 @@ fun CookTimeSection(
     minutes: String,
     onTimeChange: (String, String) -> Unit
 ) {
-    OrangeLabel(labelOrange)
-    BlueContainer {
-        Row(
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            OutlinedTextField(
-                value = hours,
-                onValueChange = { onTimeChange(it, minutes) },
-                modifier = Modifier
-                    .border(
-                        width = 1.dp,
-                        color = Color.White,
-                        shape = RoundedCornerShape(20.dp)
+    Column {
+        OrangeLabel(labelOrange)
+        Spacer(modifier = Modifier.height(6.dp))
+        BlueContainer {
+            Row(
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                TextField(
+                    value = hours,
+                    onValueChange = { onTimeChange(it.filter(Char::isDigit).take(2), minutes) },
+                    placeholder = { Text("Hours", color = Color.LightGray) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier
+                        .width(168.dp)
+                        .clip(RoundedCornerShape(20.dp)),
+                    shape = RoundedCornerShape(20.dp),
+                    singleLine = true,
+                    suffix = {
+                        Text(
+                            text = "h",
+                            style = TextStyle(
+                                color = Color.White,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold
+                            ),
+                            modifier = Modifier.padding(start = 8.dp)
+                        )
+                    },
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color(0xFF4058A0),
+                        unfocusedContainerColor = Color(0xFF4058A0),
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        cursorColor = Color(0xFFFF6339),
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent,
+                        disabledIndicatorColor = Color.Transparent
                     )
-                    .width(168.dp)
-                    .background(Color(0xFF4058A0))
-                    .padding(end = 8.dp),
-                suffix = {
-                    Text(
-                        text = "h",
-                        style = TextStyle(
-                            color = Color.White, 
-                            fontSize = 16.sp, 
-                            fontWeight = FontWeight.Bold
-                        ),
-                        modifier = Modifier.padding(start = 8.dp)
+                )
+
+                TextField(
+                    value = minutes,
+                    onValueChange = { onTimeChange(hours, it.filter(Char::isDigit).take(2)) },
+                    placeholder = { Text("Minutes", color = Color.LightGray) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(20.dp)),
+                    shape = RoundedCornerShape(20.dp),
+                    singleLine = true,
+                    suffix = {
+                        Text(
+                            text = "m",
+                            style = TextStyle(
+                                color = Color.White,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold
+                            ),
+                            modifier = Modifier.padding(start = 8.dp)
+                        )
+                    },
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color(0xFF4058A0),
+                        unfocusedContainerColor = Color(0xFF4058A0),
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        cursorColor = Color(0xFFFF6339),
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent,
+                        disabledIndicatorColor = Color.Transparent
                     )
-                }
-            )
-            
-            OutlinedTextField(
-                value = minutes,
-                onValueChange = { onTimeChange(hours, it) },
-                modifier = Modifier
-                    .border(
-                        width = 1.dp,
-                        color = Color.White,
-                        shape = RoundedCornerShape(20.dp)
-                    )
-                    .padding(start = 8.dp)
-                    .background(Color(0xFF4058A0)),
-                suffix = {
-                    Text(
-                        text = "m",
-                        style = TextStyle(
-                            color = Color.White, 
-                            fontSize = 16.sp, 
-                            fontWeight = FontWeight.Bold
-                        ),
-                        modifier = Modifier.padding(start = 8.dp)
-                    )
-                }
-            )
+                )
+            }
         }
     }
 }
@@ -543,36 +712,39 @@ fun DifficultyCard(
     selectedDifficulty: String?,
     onDifficultyChange: (String?) -> Unit
 ) {
-    OrangeLabel("Difficulty")
-    BlueContainerWithTopRadius {
-        val difficulties = listOf("Easy", "Medium", "Professional")
+    Column {
+        OrangeLabel("Difficulty")
+        Spacer(modifier = Modifier.height(6.dp))
+        BlueContainerWithTopRadius {
+            val difficulties = listOf("Easy", "Medium", "Professional")
 
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            difficulties.forEach { diff ->
-                val isSelected = selectedDifficulty == diff
-                Box(
-                    modifier = Modifier
-                        .background(
-                            if (isSelected) Color(0xFFDEE21B) else Color(0xFF4058A0),
-                            shape = RoundedCornerShape(8.dp)
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                difficulties.forEach { diff ->
+                    val isSelected = selectedDifficulty == diff
+                    Box(
+                        modifier = Modifier
+                            .background(
+                                if (isSelected) Color(0xFFDEE21B) else Color(0xFF4058A0),
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                            .border(
+                                color = Color.White,
+                                width = 1.dp,
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                            .clickable { onDifficultyChange(diff) }
+                            .padding(horizontal = 12.dp, vertical = 8.dp)
+                    ) {
+                        Text(
+                            text = diff,
+                            color = if (isSelected) Color.Black else Color.White,
+                            fontSize = if (diff == "Professional") 10.sp else 14.sp
                         )
-                        .border(
-                            color = Color.White,
-                            width = 1.dp,
-                            shape = RoundedCornerShape(8.dp)
-                        )
-                        .clickable { onDifficultyChange(diff) }
-                        .padding(horizontal = 12.dp, vertical = 8.dp)
-                ) {
-                    Text(
-                        text = diff,
-                        color = if (isSelected) Color.Black else Color.White,
-                        fontSize = if (diff == "Professional") 10.sp else 14.sp
-                    )
+                    }
                 }
             }
         }
@@ -584,55 +756,58 @@ fun DishTypeCard(
     selectedDishTypes: Set<String>,
     onDishTypesChange: (Set<String>) -> Unit
 ) {
-    OrangeLabel("Dish Type")
-    BlueContainerWithTopRadius {
-        val dishTypes = listOf(
-            "BreakFast", "Launch", "Snack", "Brunch", "Dessert", "Dinner", "Appetizer"
-        )
+    Column {
+        OrangeLabel("Dish Type")
+        Spacer(modifier = Modifier.height(6.dp))
+        BlueContainerWithTopRadius {
+            val dishTypes = listOf(
+                "BreakFast", "Launch", "Snack", "Brunch", "Dessert", "Dinner", "Appetizer"
+            )
 
-        Column(
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            dishTypes.chunked(3).forEach { rowItems ->
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    rowItems.forEach { type ->
-                        val isSelected = type in selectedDishTypes
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .background(
-                                    if (isSelected) Color(0xFFDEE21B) else Color(0xFF4058A0),
-                                    shape = RoundedCornerShape(8.dp)
-                                )
-                                .border(
-                                    color = Color.White,
-                                    width = 1.dp,
-                                    shape = RoundedCornerShape(8.dp)
-                                )
-                                .clickable {
-                                    val newSelection = selectedDishTypes.toMutableSet()
-                                    if (isSelected) {
-                                        newSelection.remove(type)
-                                    } else {
-                                        newSelection.add(type)
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                dishTypes.chunked(3).forEach { rowItems ->
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        rowItems.forEach { type ->
+                            val isSelected = type in selectedDishTypes
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .background(
+                                        if (isSelected) Color(0xFFDEE21B) else Color(0xFF4058A0),
+                                        shape = RoundedCornerShape(8.dp)
+                                    )
+                                    .border(
+                                        color = Color.White,
+                                        width = 1.dp,
+                                        shape = RoundedCornerShape(8.dp)
+                                    )
+                                    .clickable {
+                                        val newSelection = selectedDishTypes.toMutableSet()
+                                        if (isSelected) {
+                                            newSelection.remove(type)
+                                        } else {
+                                            newSelection.add(type)
+                                        }
+                                        onDishTypesChange(newSelection)
                                     }
-                                    onDishTypesChange(newSelection)
-                                }
-                                .padding(8.dp)
-                        ) {
-                            Text(
-                                text = type,
-                                color = if (isSelected) Color.Black else Color.White,
-                                fontSize = if (type.length > 8) 10.sp else 14.sp,
-                                modifier = Modifier.align(Alignment.Center)
-                            )
+                                    .padding(8.dp)
+                            ) {
+                                Text(
+                                    text = type,
+                                    color = if (isSelected) Color.Black else Color.White,
+                                    fontSize = if (type.length > 8) 10.sp else 14.sp,
+                                    modifier = Modifier.align(Alignment.Center)
+                                )
+                            }
                         }
-                    }
-                    repeat(3 - rowItems.size) {
-                        Spacer(modifier = Modifier.weight(1f))
+                        repeat(3 - rowItems.size) {
+                            Spacer(modifier = Modifier.weight(1f))
+                        }
                     }
                 }
             }
@@ -645,55 +820,58 @@ fun DietTypeCard(
     selectedDietTypes: Set<String>,
     onDietTypesChange: (Set<String>) -> Unit
 ) {
-    OrangeLabel("Diet Type")
-    BlueContainerWithTopRadius {
-        val dietTypes = listOf(
-            "Vegetarian", "High Fat", "Low Fat", "Sugar Free", "Lactose Free", "Gluten Free"
-        )
+    Column {
+        OrangeLabel("Diet Type")
+        Spacer(modifier = Modifier.height(6.dp))
+        BlueContainerWithTopRadius {
+            val dietTypes = listOf(
+                "Vegetarian", "High Fat", "Low Fat", "Sugar Free", "Lactose Free", "Gluten Free"
+            )
 
-        Column(
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            dietTypes.chunked(3).forEach { rowItems ->
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    rowItems.forEach { type ->
-                        val isSelected = type in selectedDietTypes
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .background(
-                                    if (isSelected) Color(0xFFDEE21B) else Color(0xFF4058A0),
-                                    shape = RoundedCornerShape(8.dp)
-                                )
-                                .border(
-                                    color = Color.White,
-                                    width = 1.dp,
-                                    shape = RoundedCornerShape(8.dp)
-                                )
-                                .clickable {
-                                    val newSelection = selectedDietTypes.toMutableSet()
-                                    if (isSelected) {
-                                        newSelection.remove(type)
-                                    } else {
-                                        newSelection.add(type)
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                dietTypes.chunked(3).forEach { rowItems ->
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        rowItems.forEach { type ->
+                            val isSelected = type in selectedDietTypes
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .background(
+                                        if (isSelected) Color(0xFFDEE21B) else Color(0xFF4058A0),
+                                        shape = RoundedCornerShape(8.dp)
+                                    )
+                                    .border(
+                                        color = Color.White,
+                                        width = 1.dp,
+                                        shape = RoundedCornerShape(8.dp)
+                                    )
+                                    .clickable {
+                                        val newSelection = selectedDietTypes.toMutableSet()
+                                        if (isSelected) {
+                                            newSelection.remove(type)
+                                        } else {
+                                            newSelection.add(type)
+                                        }
+                                        onDietTypesChange(newSelection)
                                     }
-                                    onDietTypesChange(newSelection)
-                                }
-                                .padding(8.dp)
-                        ) {
-                            Text(
-                                text = type,
-                                color = if (isSelected) Color.Black else Color.White,
-                                fontSize = if (type.length > 10) 8.sp else 12.sp,
-                                modifier = Modifier.align(Alignment.Center)
-                            )
+                                    .padding(8.dp)
+                            ) {
+                                Text(
+                                    text = type,
+                                    color = if (isSelected) Color.Black else Color.White,
+                                    fontSize = if (type.length > 10) 8.sp else 12.sp,
+                                    modifier = Modifier.align(Alignment.Center)
+                                )
+                            }
                         }
-                    }
-                    repeat(3 - rowItems.size) {
-                        Spacer(modifier = Modifier.weight(1f))
+                        repeat(3 - rowItems.size) {
+                            Spacer(modifier = Modifier.weight(1f))
+                        }
                     }
                 }
             }
@@ -706,4 +884,3 @@ fun DietTypeCard(
 fun AddNewRecipeStepperPreview() {
     AddNewRecipeStepper()
 }
-

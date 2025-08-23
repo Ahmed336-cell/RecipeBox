@@ -37,81 +37,84 @@ data class AddRecipeUiState(
 class AddRecipeViewModel @Inject constructor(
     private val addRecipeUseCase: AddRecipeUseCase
 ) : ViewModel() {
-    
+
     private val _recipeData = MutableStateFlow(RecipeFormData())
     val recipeData: StateFlow<RecipeFormData> = _recipeData.asStateFlow()
-    
+
     private val _currentStep = MutableStateFlow(0)
     val currentStep: StateFlow<Int> = _currentStep.asStateFlow()
-    
+
     private val _uiState = MutableStateFlow(AddRecipeUiState())
     val uiState: StateFlow<AddRecipeUiState> = _uiState.asStateFlow()
-    
+
     fun updateTitle(title: String) {
         _recipeData.value = _recipeData.value.copy(title = title)
     }
-    
+
     fun updateDescription(description: String) {
         _recipeData.value = _recipeData.value.copy(description = description)
     }
-    
+
     fun updateHashtags(hashtags: String) {
         _recipeData.value = _recipeData.value.copy(hashtags = hashtags)
     }
-    
+
     fun updateServings(servings: Int) {
-        _recipeData.value = _recipeData.value.copy(servings = servings)
+        _recipeData.value = _recipeData.value.copy(servings = servings.coerceAtLeast(1))
     }
-    
+
     fun updateCookTime(hours: String, minutes: String) {
+        val hh = hours.filter { it.isDigit() }.take(2).padStart(2, '0')
+        val mmRaw = minutes.filter { it.isDigit() }.take(2).padStart(2, '0')
+        val mm = mmRaw.toIntOrNull()?.coerceIn(0, 59)?.toString()?.padStart(2, '0') ?: "00"
         _recipeData.value = _recipeData.value.copy(
-            cookTimeHours = hours,
-            cookTimeMinutes = minutes
+            cookTimeHours = hh,
+            cookTimeMinutes = mm
         )
     }
-    
+
     fun updateDifficulty(difficulty: String?) {
         _recipeData.value = _recipeData.value.copy(difficulty = difficulty)
     }
-    
+
     fun updateDishTypes(dishTypes: Set<String>) {
         _recipeData.value = _recipeData.value.copy(dishTypes = dishTypes)
     }
-    
+
     fun updateDietTypes(dietTypes: Set<String>) {
         _recipeData.value = _recipeData.value.copy(dietTypes = dietTypes)
     }
-    
+
     fun updateIngredients(ingredients: List<String>) {
         _recipeData.value = _recipeData.value.copy(ingredients = ingredients)
     }
-    
+
     fun updateSteps(steps: List<String>) {
         _recipeData.value = _recipeData.value.copy(steps = steps)
     }
-    
+
     fun updateImageUri(uri: Uri?) {
         _recipeData.value = _recipeData.value.copy(imageUri = uri)
     }
-    
+
     fun nextStep() {
         if (_currentStep.value < 3) {
             _currentStep.value = _currentStep.value + 1
         }
     }
-    
+
     fun previousStep() {
         if (_currentStep.value > 0) {
             _currentStep.value = _currentStep.value - 1
         }
     }
-    
+
     fun goToStep(step: Int) {
         if (step in 0..3) {
             _currentStep.value = step
         }
     }
-    
+
     fun canProceedToNextStep(): Boolean {
         val data = _recipeData.value
         return when (_currentStep.value) {
@@ -122,7 +125,7 @@ class AddRecipeViewModel @Inject constructor(
             else -> false
         }
     }
-    
+
     fun validateRecipe(): Boolean {
         val data = _recipeData.value
         return data.title.isNotBlank() &&
@@ -130,7 +133,7 @@ class AddRecipeViewModel @Inject constructor(
                 data.ingredients.any { it.isNotBlank() } &&
                 data.steps.any { it.isNotBlank() }
     }
-    
+
     fun saveRecipe() {
         if (!validateRecipe()) {
             _uiState.value = _uiState.value.copy(
@@ -138,10 +141,10 @@ class AddRecipeViewModel @Inject constructor(
             )
             return
         }
-        
+
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-            
+
             val data = _recipeData.value
             val result = addRecipeUseCase(
                 title = data.title,
@@ -157,7 +160,7 @@ class AddRecipeViewModel @Inject constructor(
                 ingredientNames = data.ingredients,
                 stepDescriptions = data.steps
             )
-            
+
             result.fold(
                 onSuccess = { recipeId ->
                     _uiState.value = _uiState.value.copy(
@@ -175,11 +178,11 @@ class AddRecipeViewModel @Inject constructor(
             )
         }
     }
-    
+
     fun clearError() {
         _uiState.value = _uiState.value.copy(error = null)
     }
-    
+
     fun resetForm() {
         _recipeData.value = RecipeFormData()
         _currentStep.value = 0

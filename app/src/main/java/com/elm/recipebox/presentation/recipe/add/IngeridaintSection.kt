@@ -34,17 +34,17 @@ fun IngredientsSection(ingredients: List<String>, onChange: (List<String>) -> Un
             contentAlignment = Alignment.Center
         ) {
             Text(
-                "Ingredients", 
-                fontSize = 24.sp, 
+                "Ingredients",
+                fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.White
             )
         }
-        
+
         Spacer(modifier = Modifier.height(16.dp))
-        
+
         val displayIngredients = if (ingredients.isEmpty()) listOf("") else ingredients
-        
+
         Column(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
@@ -66,11 +66,11 @@ fun IngredientsSection(ingredients: List<String>, onChange: (List<String>) -> Un
                 )
             }
         }
-        
+
         Spacer(modifier = Modifier.height(16.dp))
-        
+
         OutlinedButton(
-            onClick = { 
+            onClick = {
                 val newList = displayIngredients.toMutableList()
                 newList.add("")
                 onChange(newList)
@@ -129,7 +129,7 @@ private fun IngredientCard(
                     fontWeight = FontWeight.Medium,
                     color = Color(0xFF4058A0)
                 )
-                
+
                 if (showDelete) {
                     IconButton(
                         onClick = onDelete,
@@ -144,10 +144,10 @@ private fun IngredientCard(
                     }
                 }
             }
-            
+
             Spacer(modifier = Modifier.height(8.dp))
-            
-            OutlinedTextField(
+
+            TextField(
                 value = ingredient,
                 onValueChange = onValueChange,
                 placeholder = {
@@ -157,13 +157,20 @@ private fun IngredientCard(
                         fontSize = 14.sp
                     )
                 },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth(),
                 shape = RoundedCornerShape(8.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Color(0xFF4058A0),
-                    unfocusedBorderColor = Color.LightGray
-                ),
-                singleLine = true
+                singleLine = true,
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = Color.White,
+                    unfocusedContainerColor = Color.White,
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent,
+                    disabledIndicatorColor = Color.Transparent,
+                    focusedTextColor = Color.Black,
+                    unfocusedTextColor = Color.Black,
+                    cursorColor = Color(0xFFFF6339)
+                )
             )
         }
     }
